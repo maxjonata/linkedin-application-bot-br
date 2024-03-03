@@ -87,3 +87,5 @@ Phone = "" #OPTIONAL
 Location = "" #OPTIONAL
 HowDidYouHeard = "" #OPTIONAL
 ConsiderMeForFutureOffers = True #true = yes, false = no
+Salary = "" #OPTIONAL
+specificCitySelectOption = "" #OPTIONAL

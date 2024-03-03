@@ -1,6 +1,10 @@
-import math,constants,config
+import math,constants,config_local as config
 from typing import List
 import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from concurrent.futures import ThreadPoolExecutor
 
 from selenium.webdriver.firefox.options import Options
 
@@ -103,7 +107,7 @@ class LinkedinUrlGenerate:
         path = []
         for location in config.location:
             for keyword in config.keywords:
-                    url = constants.linkJobUrl + "?f_AL=true&keywords=" +keyword+self.jobType()+self.remote()+self.checkJobLocation(location)+self.jobExp()+self.datePosted()+self.salary()+self.sortBy()
+                    url = constants.linkJobUrl + "?f_AL=true&keywords=" +keyword+self.jobType()+self.remote()+self.checkJobLocation(location)+self.jobExp()+self.datePosted()+self.sortBy()
                     path.append(url)
         return path
 
@@ -263,3 +267,79 @@ class LinkedinUrlGenerate:
             case "Relevent":
                 sortBy = "sortBy=R"                
         return sortBy
+
+# SELENIUM UTILS
+def wait_until_visible_and_find(driver, ByLocal, locator_value, timeout=constants.botSpeed):
+    """
+    Waits until an element becomes clickable, then finds a new element using the same locator.
+    :param driver: WebDriver instance
+    :param locator_type: type of locator (e.g., "xpath", "id", "name", etc.)
+    :param locator_value: value of the locator (e.g., "//div[@id='example']", "my_element", etc.)
+    :param timeout: maximum time to wait for the element to become clickable (default is 10 seconds)
+    :return: the new element found, or None if the element is not found within the timeout
+    """
+    try:
+        wait = WebDriverWait(driver, timeout)
+        new_element = wait.until(EC.visibility_of_element_located((ByLocal, locator_value)))
+        return new_element
+    except Exception as e:
+        raise Exception(f"Timeout excedido ao tentar encontrar elemento {locator_value}.") from e
+
+def wait_until_visible_and_find_all(driver, ByLocal, locator_value, timeout=constants.botSpeed):
+    """
+    Waits until an element becomes clickable, then finds a new element using the same locator.
+    :param driver: WebDriver instance
+    :param locator_type: type of locator (e.g., "xpath", "id", "name", etc.)
+    :param locator_value: value of the locator (e.g., "//div[@id='example']", "my_element", etc.)
+    :param timeout: maximum time to wait for the element to become clickable (default is 10 seconds)
+    :return: the new element found, or None if the element is not found within the timeout
+    """
+    try:
+        wait = WebDriverWait(driver, timeout)
+        new_element = wait.until(EC.visibility_of_all_elements_located((ByLocal, locator_value)))
+        return new_element
+    except Exception as e:
+        raise Exception(f"Timeout excedido ao tentar encontrar elemento {locator_value}.") from e
+
+def wait_until_visible_and_find_multiple_locators_parallel(driver, ByAndLocatorDictArray, timeout=constants.botSpeed):
+    """
+    Waits until an element becomes clickable, then finds a new element using the same locator.
+    :param driver: WebDriver instance
+    :param ByAndLocatorDict: dictionary with the locator type as key and the locator value as value
+    :param timeout: maximum time to wait for the element to become clickable (default is 10 seconds)
+    :return: the new element found, or None if the element is not found within the timeout
+    """
+    with ThreadPoolExecutor() as executor:
+        args_for_map = [(driver, ByAndLocatorDict, timeout) for ByAndLocatorDict in ByAndLocatorDictArray]
+        results = executor.map(wait_visibility, args_for_map)
+        new_elements = list(results)
+    return new_elements
+
+def wait_visibility(args):
+    driver, ByAndLocatorDict, timeout = args
+    wait = WebDriverWait(driver, timeout=constants.botSpeed)
+    result = False
+    by = ByAndLocatorDict["By"]
+    locator_value = ByAndLocatorDict["locator_value"]
+    try:
+        result = wait.until(EC.visibility_of_all_elements_located((by, locator_value)))
+    except:
+        _foo = None
+    return result
+
+def find_child_element_s(parent_element, ByLocal, locator_value, multiple = False):
+    """
+    Finds child elements of a given element.
+    :param parent_element: the parent element
+    :param locator_type: type of locator (e.g., "xpath", "id", "name", etc.)
+    :param locator_value: value of the locator (e.g., "//div[@id='example']", "my_element", etc.)
+    :return: the child elements found, or None if the element is not found
+    """
+    try:
+        parent_element.is_displayed()
+    except Exception as e:
+        raise Exception(f"Elemento não existe mais: {parent_element}") from e
+    if multiple:
+        return parent_element.find_elements(ByLocal, locator_value)
+    else:
+        return parent_element.find_element(ByLocal, locator_value)

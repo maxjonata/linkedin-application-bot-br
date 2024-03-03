@@ -3,8 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-config_internal.py
-
 config_local.py
 
 # C extensions
@@ -173,6 +171,8 @@ mainConfig.py
 geckodriver.log
 *.txt
 *.exe
+config_local.py
+Presentation_Letter.pdf
 
 # premium files
 angelco.py

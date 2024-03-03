@@ -74,8 +74,8 @@ def checkSeleniumLinkedin():
                         '//*[@id="organic-div"]/form/div[3]/button')
                 print(user_field, pw_field, login_button)
                 # enter your linkedin username and  password below 
-                username="linkedin@username.com"
-                password="linkedin_password"
+                username = "cohenaj194@gmail.com"
+                password = "foobar"
                 user_field.send_keys(username)
                 user_field.send_keys(Keys.TAB)
                 time.sleep(2)
