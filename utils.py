@@ -1,10 +1,12 @@
 import math,constants,config_local as config
 from typing import List
 import time
+import json
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from concurrent.futures import ThreadPoolExecutor
+import re
 
 from selenium.webdriver.firefox.options import Options
 
@@ -285,6 +287,38 @@ def wait_until_visible_and_find(driver, ByLocal, locator_value, timeout=constant
     except Exception as e:
         raise Exception(f"Timeout excedido ao tentar encontrar elemento {locator_value}.") from e
 
+def wait_until_clickable_and_find(driver, ByLocal, locator_value, timeout=constants.botSpeed):
+    """
+    Waits until an element becomes clickable, then finds a new element using the same locator.
+    :param driver: WebDriver instance
+    :param locator_type: type of locator (e.g., "xpath", "id", "name", etc.)
+    :param locator_value: value of the locator (e.g., "//div[@id='example']", "my_element", etc.)
+    :param timeout: maximum time to wait for the element to become clickable (default is 10 seconds)
+    :return: the new element found, or None if the element is not found within the timeout
+    """
+    try:
+        wait = WebDriverWait(driver, timeout)
+        new_element = wait.until(EC.element_to_be_clickable((ByLocal, locator_value)))
+        return new_element
+    except Exception as e:
+        raise Exception(f"Timeout excedido ao tentar encontrar elemento {locator_value}.") from e
+
+def wait_until_invisible_and_find(driver, ByLocal, locator_value, timeout=constants.botSpeed):
+    """
+    Waits until an element becomes clickable, then finds a new element using the same locator.
+    :param driver: WebDriver instance
+    :param locator_type: type of locator (e.g., "xpath", "id", "name", etc.)
+    :param locator_value: value of the locator (e.g., "//div[@id='example']", "my_element", etc.)
+    :param timeout: maximum time to wait for the element to become clickable (default is 10 seconds)
+    :return: the new element found, or None if the element is not found within the timeout
+    """
+    try:
+        wait = WebDriverWait(driver, timeout)
+        new_element = wait.until(EC.invisibility_of_element_located((ByLocal, locator_value)))
+        return new_element
+    except Exception as e:
+        raise Exception(f"Timeout excedido ao tentar encontrar elemento {locator_value}.") from e
+
 def wait_until_visible_and_find_all(driver, ByLocal, locator_value, timeout=constants.botSpeed):
     """
     Waits until an element becomes clickable, then finds a new element using the same locator.
@@ -309,10 +343,15 @@ def wait_until_visible_and_find_multiple_locators_parallel(driver, ByAndLocatorD
     :param timeout: maximum time to wait for the element to become clickable (default is 10 seconds)
     :return: the new element found, or None if the element is not found within the timeout
     """
+    new_elements = []
     with ThreadPoolExecutor() as executor:
         args_for_map = [(driver, ByAndLocatorDict, timeout) for ByAndLocatorDict in ByAndLocatorDictArray]
         results = executor.map(wait_visibility, args_for_map)
         new_elements = list(results)
+    # args_for_map = [(driver, ByAndLocatorDict, timeout) for ByAndLocatorDict in ByAndLocatorDictArray]
+    # new_elements = []
+    # for args in args_for_map:
+    #     new_elements.append(wait_visibility(args))
     return new_elements
 
 def wait_visibility(args):
@@ -336,10 +375,158 @@ def find_child_element_s(parent_element, ByLocal, locator_value, multiple = Fals
     :return: the child elements found, or None if the element is not found
     """
     try:
-        parent_element.is_displayed()
+        if not parent_element.is_displayed():
+            raise Exception(f"{parent_element}")
+        if multiple:
+            elements = parent_element.find_elements(ByLocal, locator_value)
+            return elements
+        else:
+            return parent_element.find_element(ByLocal, locator_value)
     except Exception as e:
         raise Exception(f"Elemento não existe mais: {parent_element}") from e
-    if multiple:
-        return parent_element.find_elements(ByLocal, locator_value)
-    else:
-        return parent_element.find_element(ByLocal, locator_value)
+
+def elementCanBeFound(driver, ByLocal, locator_value):
+    try:
+        driver.find_element(ByLocal, locator_value)
+        return True
+    except:
+        return False
+
+def ifException_False(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except:
+            return False
+    return wrapper
+
+def storeUnansweredJson(fileName, error):
+    #Change properties with label in the name to just 'Label'
+    newError = {}
+    for key in error:
+        if 'label' in key.lower():
+            newError['Label'] = error[key]
+        else:
+            newError[key] = error[key]
+    #Check for duplicates only if the file exists
+    try:
+        with open(f'data/unanswered{fileName}.json', 'r', encoding="utf-8") as json_file:
+            for line in json_file:
+                if newError == json.loads(line):
+                    return
+    except Exception as e:
+        pass
+
+    #Save the data
+    with open(f'data/unanswered{fileName}.json', 'a', encoding="utf-8") as json_file:
+        json_file.write(json.dumps(newError, ensure_ascii=False) + "\n")
+
+def storeUnansweredData(errorsList):
+    for error in errorsList:
+        if 'Radio Label' in error:
+            storeUnansweredJson('RadioLabels', error)
+        elif 'Text Label' in error:
+            storeUnansweredJson('TextLabels', error)
+        elif 'Select Label' in error:
+            storeUnansweredJson('SelectLabels', error)
+        elif 'Checkbox Label' in error:
+            storeUnansweredJson('CheckboxLabels', error)
+    
+    # TODO log that the errors were stored in the file
+    # TODO log errors that were not stored in the file
+
+def getErrorsListFromJson():
+    errorsList = []
+    files = ['RadioLabels', 'TextLabels', 'SelectLabels', 'CheckboxLabels']
+    for fileName in files:
+        try:
+            with open(f'data/unanswered{fileName}.json', 'r', encoding="utf-8") as json_file:
+                for line in json_file:
+                    with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
+                        linha = json.loads(line)
+                        if not getAnsweredQuestion(linha['Label']):
+                            if "ncia de pelo menos 2 anos com gestão de times de desenvolvimento" in line:
+                                a = None
+                            errorsList.append(linha)
+        except:
+            pass
+    # try:
+    #     with open('data/unansweredRadioLabels.json', 'r', encoding="utf-8") as json_file:
+    #         for line in json_file:
+    #             with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
+    #                 if not getAnsweredQuestion(json.loads(line)['Label']):
+    #                     if "ncia de pelo menos 2 anos com gestão de times de desenvolvimento" in line:
+    #                         a = None
+    #                     errorsList.append(json.loads(line))
+    # except:
+    #     pass
+    # try:
+    #     with open('data/unansweredTextLabels.json', 'r', encoding="utf-8") as json_file:
+    #         for line in json_file:
+    #             with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
+    #                 if not getAnsweredQuestion(json.loads(line)['Label']):
+    #                     if "ncia de pelo menos 2 anos com gestão de times de desenvolvimento" in line:
+    #                         a = None
+    #                     errorsList.append(json.loads(line))
+    # except:
+    #     pass
+    # try:    
+    #     with open('data/unansweredSelectLabels.json', 'r', encoding="utf-8") as json_file:
+    #         for line in json_file:
+    #             with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
+    #                 if getAnsweredQuestion(json.loads(line)['Label']):
+    #                     continue
+    #             errorsList.append(json.loads(line))
+    # except:
+    #     pass
+    # try:    
+    #     with open('data/unansweredCheckboxLabels.json', 'r', encoding="utf-8") as json_file:
+    #         for line in json_file:
+    #             # with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
+    #             #     if getAnsweredQuestion(json.loads(line)['Label']):
+    #             #         continue
+    #             errorsList.append(json.loads(line))
+    # except:
+    #     pass
+    return errorsList
+
+def saveAnsweredQuestions(QuestionAnswer_List: List[dict]):
+    with open('data/answeredQuestions.json', 'a', encoding="utf-8") as json_file:
+        for questionAnswer in QuestionAnswer_List:
+            json_file.write(json.dumps(questionAnswer, ensure_ascii=False) + "\n")
+
+def saveAnsweredQuestion(QuestionAnswer: dict):
+    with open('data/answeredQuestions.json', 'a', encoding="utf-8") as json_file:
+        json_file.write(json.dumps(QuestionAnswer, ensure_ascii=False) + "\n")
+
+def getAnsweredQuestion(label: str):
+    try:
+        with open('data/answeredQuestions.json', 'r', encoding="utf-8") as json_file:
+            for line in json_file:
+                line = line.replace("\n", "")
+                line = PadronizeSpaces(line)
+                label = PadronizeSpaces(label)
+                answerDict = json.loads(line)
+                for dictLabel in answerDict:
+                    if label in dictLabel:
+                        return json.loads(line)
+    except:
+        pass
+    
+    return False
+
+def getAnsweredQuestions():
+    list = []
+    with open('data/answeredQuestions.json', 'r', encoding="utf-8") as json_file:
+        for line in json_file:
+            list.append(json.loads(line))
+    return list
+
+def PadronizeSpaces(texto):
+    # Remove extra spaces before and after commas
+    texto = re.sub(r'\s*,\s*', ', ', texto)
+    # Remove extra spaces before dot
+    texto = re.sub(r'\s*\.', '.', texto)
+    # Remove extra spaces
+    texto = re.sub(r'\s+', ' ', texto)
+    return texto

@@ -10,6 +10,8 @@
 #     a = None
 
 import utils
+import config_local
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from concurrent.futures import ThreadPoolExecutor
 
@@ -25,12 +27,10 @@ def check_all_THEN_fill_all(self, config_local, errorslist):
             {"By": By.XPATH, "locator_value": "//div/div[contains(@class, 'jobs-easy-apply-modal')]//*[contains(text(), 'City')]/../..//input"},
             {"By": By.XPATH, "locator_value": "//div/div[contains(@class, 'jobs-easy-apply-modal')]//*[contains(text(), 'salary')]/../input"},
             {"By": By.XPATH, "locator_value": '//input[contains(@id, "cover-letter")]'},
-            {"By": By.XPATH, "locator_value": "//button[contains(@aria-label,'Continue to next step')]"},
-            {"By": By.XPATH, "locator_value": "//button[contains(@aria-label,'Review your application')]"},
-            {"By": By.XPATH, "locator_value": "//*[@data-test-form-builder-radio-button-form-component]"},
-            {"By": By.XPATH, "locator_value": "//*[@data-test-text-entity-list-form-component]"},
-            {"By": By.XPATH, "locator_value": "//*[@data-test-single-line-text-form-component]"},
-            {"By": By.XPATH, "locator_value": "//*[contains(@id, 'checkbox-form-component')]"}
+            {"By": By.XPATH, "locator_value": "//*[@data-test-form-builder-radio-button-form-component][not(contains(@id, 'error'))]"},
+            {"By": By.XPATH, "locator_value": "//*[@data-test-text-entity-list-form-component][not(contains(@id, 'error'))]"},
+            {"By": By.XPATH, "locator_value": "//*[@data-test-single-line-text-form-component][not(contains(@id, 'error'))]"},
+            {"By": By.XPATH, "locator_value": "//*[contains(@id, 'checkbox-form-component')][not(contains(@id, 'error'))]"}
         ]
     )
 
@@ -41,19 +41,17 @@ def check_all_THEN_fill_all(self, config_local, errorslist):
           elif i == 1:
               fillSalary(results[i], config_local, errorslist)
           elif i == 2:
-              fillPresentationLetter(results[i], errorslist) 
+              fillPresentationLetter(results[i], errorslist)
           elif i == 3:
-              continueNextStep(results[i], errorslist)
-          elif i == 4:
-              reviewApplication(results[i], errorslist)
-          elif i == 5:
               fillRadioFields(self.driver, results[i], errorslist)
-          elif i == 6:
+          elif i == 4:
               fillSelectFields(self.driver, results[i], errorslist)
-          elif i == 7:
+          elif i == 5:
               fillTextFields(self.driver, results[i], errorslist)
-          elif i == 8:
+          elif i == 6:
               fillCheckboxFields(self.driver, results[i], errorslist)
+    
+    utils.storeUnansweredData(errorslist)
     
 def continueNextStep(continueButtons, errorslist):
     for continueButton in continueButtons:
@@ -100,7 +98,14 @@ def fillTextFields(driver, textFields, errorslist):
         for i in range(len(textFields)):
             input = driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//input")[i]
             if input.get_attribute("value") == "":
-                errorslist.append(driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//label")[i].text)
+                label = driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//label")[i].text
+                answered = utils.getAnsweredQuestion(label)
+                if answered is not False:
+                    if answered is None:
+                        a = None
+                    input.send_keys(answered[next(iter(answered))])
+                else:
+                    errorslist.append({"Text Label": label})
     except Exception as e:
         print(e)
         errorslist.append("Text Field")
@@ -112,47 +117,53 @@ def fillSelectFields(driver, selectFields, errorslist):
             if (select.get_attribute("selectedIndex") == "0"):
                 label = driver.find_elements(By.XPATH, "//*[@data-test-text-entity-list-form-component]//label/span[1]")[i].text
                 options = [option.text for option in select.find_elements(By.TAG_NAME, "option")]
-                
-                errorslist.append({"Select Label": label, "Options": options})
+                answered = utils.getAnsweredQuestion(label)
+                if answered is not False and answered[label] in options:
+                    if answered is None:
+                        a = None
+                    select = Select(select)
+                    select.select_by_visible_text(answered[next(iter(answered))])
+                else:
+                    errorslist.append({"Select Label": label, "Options": options})
     except Exception as e:
         print(e)
         errorslist.append("Select Field")
 
 def fillRadioFields(driver, radioFields, errorslist):
     try:
-        for i in range(len(radioFields)):
-            radioField = radioFields[i]
-            label = utils.find_child_element_s(driver, radioField, By.XPATH, "//span[contains(@class, 'label')]/span[1]")
-            # label = driver.find_elements(By.XPATH, "//*[@data-test-form-builder-radio-button-form-component]//span[contains(@class, 'label')]")[i].text
+        for i in range(1, len(radioFields)+1):
+            label = driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[{i}][not(contains(@id, 'error'))]/legend/span[contains(@class, 'label')]/span[1]").text
             options = []
             dobreak = False
-            optionElements = utils.find_child_element_s(driver, radioField, By.XPATH, "//div", True)
-            for option in optionElements:
-                options.append(utils.find_child_element_s(driver, option, By.XPATH, "//label").text)
-                if utils.find_child_element_s(driver, option, By.XPATH, "//input").is_selected():
+            optionElements = driver.find_elements(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div")
+            for i2 in range(1, len(optionElements)+1):
+                options.append(driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{i2}]/label").text)
+                if driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{i2}]/input").is_selected():
                     dobreak = True
-            # for i2 in range(len(driver.find_elements(By.XPATH, "//div[contains(@class, 'jobs-easy-apply-form-section__grouping')][1]//fieldset//div"))):
-            #     options.append(driver.find_element(By.XPATH, "//div[contains(@class, 'jobs-easy-apply-form-section__grouping')][1]//fieldset//div["+i2+"]//label").text)
-            #     if driver.find_elements(By.XPATH, "//*[@data-test-form-builder-radio-button-form-component]//div//input")[i2].is_selected():
-            #         dobreak = True
+
             if not dobreak:
-                errorslist.append({"Radio Label": label, "Options": options})
+                answered = utils.getAnsweredQuestion(label)
+                if answered is not False and answered[next(iter(answered))] in options:
+                    driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered[next(iter(answered))])+1}]/label").click()
+                else:
+                    errorslist.append({"Radio Label": label, "Options": options})
+
     except Exception as e:
         print(e)
         errorslist.append("Radio Field")
 
 def fillCheckboxFields(driver, checkboxFields, errorslist):
     try:
-        for i in range(len(checkboxFields)):
-            checkbox = checkboxFields[i]
-            label = checkbox.find_elements(By.XPATH, "//div[contains(@class, 'label')]//span")[i].text
+        for i in range(1, len(checkboxFields)+1):
+            label = driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/legend/div[contains(@class, 'label')]/span[1]").text
             options = []
-            for i2 in range(len(checkbox.find_elements(By.XPATH, "//div[contains(@class, 'option')]")[i2])):
-                options.append(option.find_elements(By.XPATH, "//label").text)
-                if driver.find_element(By.XPATH, "//input")[i2].is_selected():
+            dobreak = False
+            for i2 in range(1, len(driver.find_elements(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div"))+1):
+                options.append(driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{i2}]/label").text)
+                if driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{i2}]/input").is_selected():
                     dobreak = True
-            if not dobreak:
-                errorslist.append({"Checkbox Label": label, "Option": options})
+        if not dobreak:
+            errorslist.append({"Checkbox Label": label, "Options": options})
     except Exception as e:
         print(e)
         errorslist.append("Checkbox Field")

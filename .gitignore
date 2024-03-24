@@ -173,7 +173,12 @@ geckodriver.log
 *.exe
 config_local.py
 Presentation_Letter.pdf
+*.json
+*.jsonl
 
 # premium files
 angelco.py
 globalLogicCode.py
+
+#vscode
+.vscode/

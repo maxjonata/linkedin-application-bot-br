@@ -7,6 +7,9 @@ import finders
 import constants
 import config_local
 import platform
+import datetime
+
+from langdetect import detect
 
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
@@ -102,11 +105,17 @@ class Linkedin:
     
     def go_through_offers(self, jobID, countApplied, countJobs):
         # need to get a better page
+        start_time = datetime.datetime.now()
         offerPage = "https://www.linkedin.com/jobs/view/" + \
             str(jobID)
 
-        self.driver.get(offerPage)
-        time.sleep(random.uniform(1, constants.botSpeed))
+        while True:
+            self.driver.get(offerPage)
+            try:
+                if utils.wait_until_visible_and_find(self.driver, By.XPATH, "//*[contains(@class,'jobs-post-job')]") is not False:
+                    break
+            except:
+                a = None
 
         countJobs += 1
 
@@ -118,93 +127,37 @@ class Linkedin:
                     "Blacklisted word found in url - skipping (" +
                     blacklistword + ")")
                 button = False
-            time.sleep(random.uniform(1, constants.botSpeed))
-
+        end_time = datetime.datetime.now()
+        time_diff = end_time - start_time
+        print("Time to get job properties and button: " + str(time_diff))
+        description = self.driver.find_element(
+            By.XPATH,
+            "//article[contains(@class, 'jobs-description')]/div"
+        ).get_attribute("innerText")
+        # To filter by language choose abbreviations here: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+        # if detect(description) != "en":
+        #     lineToWrite = (jobProperties + " | " +
+        #                     "* 🌍 Non English Language Detected, Skipped: " +
+        #                     str(offerPage))
+        #     self.displayWriteResults(lineToWrite)
         if button is not False:
-            button.click()
-            WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]"))).click()
-            countApplied += 1
             try:
-                utils.wait_until_visible_and_find(self.driver,
-                    By.CSS_SELECTOR,
-                    "button[aria-label='Submit application']",
-                ).click()
-
-                lineToWrite = (jobProperties + " | " +
-                                "* 🟢 Just Applied to this job: " +
-                                str(offerPage))
+                button.click()
+                # print(0)
+                utils.wait_until_visible_and_find(self.driver, By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]")
+                countApplied += 1
+                # print(4)
+                result = self.applyProcess(offerPage)
+                lineToWrite = jobProperties + " | " + result
                 self.displayWriteResults(lineToWrite)
-
-            except:
-                try:
-                    utils.wait_until_visible_and_find(self.driver,
-                        By.CSS_SELECTOR,
-                        "button[aria-label='Continue to next step']",
-                    ).click()
-
-                    comPercentage = self.driver.find_element(
-                        By.XPATH,
-                        "html/body/div[3]/div/div/div[2]/div/div/span",
-                    ).text
-                    percenNumber = int(
-                        comPercentage[0:comPercentage.index("%")])
-                    result = self.applyProcess(
-                        percenNumber, offerPage)
-                    lineToWrite = jobProperties + " | " + result
-                    self.displayWriteResults(lineToWrite)
-
-                except Exception as e:
-                    try:
-                        try:
-                            self.driver.find_element(
-                                By.CSS_SELECTOR,
-                                "option[value='urn:li:country:" +
-                                config_local.country_code + "']",
-                            ).click()
-                            time.sleep(
-                                random.uniform(
-                                    1, constants.botSpeed))
-                        except:
-                            a = None
-                        try:
-                            self.driver.find_element(
-                                By.CSS_SELECTOR,
-                                "input").send_keys(
-                                    config_local.phone_number)
-                            time.sleep(
-                                random.uniform(
-                                    1, constants.botSpeed))
-                        except:
-                            a = None
-                        try:
-                            utils.wait_until_visible_and_find(self.driver,
-                                By.CSS_SELECTOR,
-                                "button[aria-label='Continue to next step']",
-                            ).click()
-                            time.sleep(
-                                random.uniform(
-                                    1, constants.botSpeed))
-                        except:
-                            a = None
-                        comPercentage = self.driver.find_element(
-                            By.XPATH,
-                            "html/body/div[3]/div/div/div[2]/div/div/span",
-                        ).text
-                        percenNumber = int(
-                            comPercentage[0:comPercentage.index("%"
-                                                                )])
-                        result = self.applyProcess(
-                            percenNumber, offerPage)
-                        lineToWrite = jobProperties + " | " + result
-                        self.displayWriteResults(lineToWrite)
-                    except Exception as e2:
-                        print(e2)
-                        lineToWrite = (
-                            jobProperties + " | " +
-                            "* 🔴 Cannot apply to this Job! " +
-                            str(offerPage))
-                        self.displayWriteResults(lineToWrite)
-                        quit()
+                # print(5)
+            except Exception as e2:
+                # print(e2)
+                lineToWrite = (
+                    jobProperties + " | " +
+                    "* 🔴 Cannot apply to this Job! " +
+                    str(offerPage))
+                self.displayWriteResults(lineToWrite)
         else:
             lineToWrite = (jobProperties + " | " +
                             "* 🟡 Already applied or Error to acquire button! Job: " +
@@ -250,123 +203,6 @@ class Linkedin:
 
                 for jobID in offerIds:
                     countApplied, countJobs = self.go_through_offers(jobID, countApplied, countJobs)
-                # with ThreadPoolExecutor() as executor:
-                #     futures = [executor.submit(self.go_through_offers, self, jobID, countApplied, countJobs) for jobID in offerIds]
-                #     for futures in futures:
-                #         countApplied2, countJobs2 = futures.result()
-                #         countApplied += countApplied2
-                #         countJobs += countJobs2
-
-                #     # need to get a better page
-                #     offerPage = "https://www.linkedin.com/jobs/view/" + \
-                #         str(jobID)
-
-                #     self.driver.get(offerPage)
-                #     time.sleep(random.uniform(1, constants.botSpeed))
-
-                #     countJobs += 1
-
-                #     jobProperties = self.getJobProperties(countJobs)
-                #     button = self.easyApplyButton()
-                #     for blacklistword in config_local.blacklist:
-                #         if blacklistword in jobProperties:
-                #             print(
-                #                 "Blacklisted word found in url - skipping (" +
-                #                 blacklistword + ")")
-                #             button = False
-                #         time.sleep(random.uniform(1, constants.botSpeed))
-
-                #     if button is not False:
-                #         button.click()
-                #         WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]"))).click()
-                #         countApplied += 1
-                #         try:
-                #             utils.wait_until_visible_and_find(self.driver,
-                #                 By.CSS_SELECTOR,
-                #                 "button[aria-label='Submit application']",
-                #             ).click()
-
-                #             lineToWrite = (jobProperties + " | " +
-                #                            "* 🟢 Just Applied to this job: " +
-                #                            str(offerPage))
-                #             self.displayWriteResults(lineToWrite)
-
-                #         except:
-                #             try:
-                #                 utils.wait_until_visible_and_find(self.driver,
-                #                     By.CSS_SELECTOR,
-                #                     "button[aria-label='Continue to next step']",
-                #                 ).click()
-                #                 time.sleep(
-                #                     random.uniform(1, constants.botSpeed))
-                #                 comPercentage = utils.wait_until_visible_and_find(self.driver,
-                #                     By.XPATH,
-                #                     "html/body/div[3]/div/div/div[2]/div/div/span",
-                #                 ).text
-                #                 percenNumber = int(
-                #                     comPercentage[0:comPercentage.index("%")])
-                #                 result = self.applyProcess(
-                #                     percenNumber, offerPage)
-                #                 lineToWrite = jobProperties + " | " + result
-                #                 self.displayWriteResults(lineToWrite)
-
-                #             except Exception as e:
-                #                 try:
-                #                     try:
-                #                         utils.wait_until_visible_and_find(self.driver,
-                #                             By.CSS_SELECTOR,
-                #                             "option[value='urn:li:country:" +
-                #                             config_local.country_code + "']",
-                #                         ).click()
-                #                         time.sleep(
-                #                             random.uniform(
-                #                                 1, constants.botSpeed))
-                #                     except:
-                #                         a = None
-                #                     try:
-                #                         utils.wait_until_visible_and_find(self.driver,
-                #                             By.CSS_SELECTOR,
-                #                             "input").send_keys(
-                #                                 config_local.phone_number)
-                #                         time.sleep(
-                #                             random.uniform(
-                #                                 1, constants.botSpeed))
-                #                     except:
-                #                         a = None
-                #                     try:
-                #                         utils.wait_until_visible_and_find(self.driver,
-                #                             By.CSS_SELECTOR,
-                #                             "button[aria-label='Continue to next step']",
-                #                         ).click()
-                #                         time.sleep(
-                #                             random.uniform(
-                #                                 1, constants.botSpeed))
-                #                     except:
-                #                         a = None
-                #                     comPercentage = utils.wait_until_visible_and_find(self.driver,
-                #                         By.XPATH,
-                #                         "html/body/div[3]/div/div/div[2]/div/div/span",
-                #                     ).text
-                #                     percenNumber = int(
-                #                         comPercentage[0:comPercentage.index("%"
-                #                                                             )])
-                #                     result = self.applyProcess(
-                #                         percenNumber, offerPage)
-                #                     lineToWrite = jobProperties + " | " + result
-                #                     self.displayWriteResults(lineToWrite)
-                #                 except Exception as e2:
-                #                     print(e2)
-                #                     lineToWrite = (
-                #                         jobProperties + " | " +
-                #                         "* 🔴 Cannot apply to this Job! " +
-                #                         str(offerPage))
-                #                     self.displayWriteResults(lineToWrite)
-                #                     quit()
-                #     else:
-                #         lineToWrite = (jobProperties + " | " +
-                #                        "* 🟡 Already applied or Error to acquire button! Job: " +
-                #                        str(offerPage))
-                #         self.displayWriteResults(lineToWrite)
 
             prYellow("Category: " + urlWords[0] + "," + urlWords[1] +
                      " applied: " + str(countApplied) + " jobs out of " +
@@ -388,7 +224,7 @@ class Linkedin:
                 By.XPATH, "//h1[contains(@class, 'job-title')]").get_attribute(
                     "innerText").strip())
         except Exception as e:
-            prYellow("Warning in getting jobTitle: " + str(e)[0:50])
+            # prYellow("Warning in getting jobTitle: " + str(e)[0:50])
             jobTitle = ""
         try:
             jobCompany = self.driver.find_element(
@@ -396,7 +232,7 @@ class Linkedin:
                 "//a[contains(@class, 'ember-view') and contains(@class, 't-black')]",
             ).get_attribute("innerText").strip()
         except Exception as e:
-            prYellow("Warning in getting jobCompany: " + str(e)[0:50])
+            # prYellow("Warning in getting jobCompany: " + str(e)[0:50])
             jobCompany = ""
         try:
             jobLocation = self.driver.find_element(
@@ -427,7 +263,7 @@ class Linkedin:
                 "//span[contains(@class, 'tvm__text tvm__text--neutral') and contains(text(), 'applicant')]",
             ).get_attribute("innerText").strip()
         except Exception as e:
-            prYellow("Warning in getting jobApplications: " + str(e)[0:50])
+            # prYellow("Warning in getting jobApplications: " + str(e)[0:50])
             jobApplications = ""
 
         textToWrite = (str(count) + " | " + jobTitle + " | " + jobCompany +
@@ -436,84 +272,119 @@ class Linkedin:
 
     def easyApplyButton(self):
         try:
-            button = self.driver.find_element(
-                By.XPATH,
-                '//div[contains(@class, "jobs-apply-button--top-card")]/button[contains(@class, "jobs-apply-button")]',
-            )
-            EasyApplyButton = button
-        except:
-            EasyApplyButton = False
-        time.sleep(random.uniform(1, constants.botSpeed))
-
-        if EasyApplyButton is not False:
-            if "Easy Apply" not in button.text:
-                EasyApplyButton = False
-        return EasyApplyButton
-
-    def submitFound(self):
-        try:
-            self.driver.find_element(
-                By.CSS_SELECTOR,
-                "button[aria-label='Submit application']").click()
+            while True:
+                buttonFound = utils.ifException_False(utils.wait_until_visible_and_find)(self.driver, By.XPATH, '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(normalize-space(), "Easy Apply")]/parent::button')
+                clickableButtonFound = utils.ifException_False(utils.wait_until_clickable_and_find)(self.driver, By.XPATH, '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(normalize-space(), "Easy Apply")]/parent::button')
+                if buttonFound is False:
+                    return False
+                if buttonFound is not False and clickableButtonFound is not False:
+                    return clickableButtonFound
+                if buttonFound is not False and clickableButtonFound is False:
+                    self.driver.refresh()
         except:
             a = None
+            return False
+
+    def submitFound(self, errorslist):
+        # print(7)
         try:
-            utils.wait_until_visible_and_find(self.driver, By.XPATH, "//h3[contains(normalize-space(), 'Your application was sent')]").click()
+            while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
+                button = None
+                try:
+                    button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]")
+                except:
+                    try:
+                        button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]")
+                    except:
+                        try:
+                            button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]")
+                            if config_local.followCompanies is False:
+                                try:
+                                    self.driver.find_element(
+                                        By.CSS_SELECTOR,
+                                        "label[for='follow-company-checkbox']").click()
+                                except:
+                                    a = None
+                        except:
+                            a = None
+                finders.continueNextStep([button], errorslist)
+        except:
+            a = None
+        # print(8)
+        try:
+            utils.wait_until_visible_and_find(self.driver, By.XPATH, "//h3[contains(normalize-space(), 'Your application was sent')]")
             
             return True
         except:
             return False
 
-    def applyProcess(self, percentage, offerPage):
-        applyPages = math.floor(100 / percentage)
+    def applyProcess(self, offerPage):
         result = ""
         progress = 0
         attempts = 0
         errorslist = []
+        start_time = datetime.datetime.now()
         try:
-            while self.submitFound() == False and attempts < 2:
+            while self.submitFound(errorslist) == False and attempts < 1:
+                # print(1)
                 try:
                     barNow = utils.wait_until_visible_and_find(self.driver,
                         By.XPATH, "//progress").get_attribute("aria-valuenow")
                 except Exception as e:
                     print("Error in getting BAR: " + str(e))
-                if progress == barNow:
+                if int(progress) == int(barNow):
                     attempts += 1
                 else:
                     attempts = 0
-                    
+                # print(2)
                 errorslist = []
                 progress = barNow
-
+                
+                while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
+                    button = None
+                    try:
+                        button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]")
+                    except:
+                        try:
+                            button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]")
+                        except:
+                            try:
+                                button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]")
+                                if config_local.followCompanies is False:
+                                    try:
+                                        self.driver.find_element(
+                                            By.CSS_SELECTOR,
+                                            "label[for='follow-company-checkbox']").click()
+                                    except:
+                                        a = None
+                            except:
+                                a = None
+                    finders.continueNextStep([button], errorslist)
                 finders.check_all_THEN_fill_all(self, config_local, errorslist)
-
-            if config_local.followCompanies is False:
-                try:
-                    self.driver.find_element(
-                        By.CSS_SELECTOR,
-                        "label[for='follow-company-checkbox']").click()
-                except:
-                    a = None
-
+                # print(3)
             try:
                 self.driver.find_element(
                     By.CSS_SELECTOR,
                     "button[aria-label='Submit application']").click()
             except:
-                self.driver.find_element(By.XPATH,
-                                         "//*[text() = 'Application sent']")
+                a = None
+
+            self.driver.find_element(By.XPATH,
+                "//h3[contains(normalize-space(), 'sent')]")
 
             result = "* 🟢 Just Applied to this job: " + str(offerPage)
         except:
             result = (
-                "* 🔴 " + str(applyPages) +
-                " Pages, couldn't apply to this job! Extra info needed. Link: "
+                "* 🔴 " +
+                " Couldn't apply to this job! Extra info needed. Link: "
                 + str(offerPage) +
                 "\n--------------------------- errorList -----------------------------\n"
                 + str(errorslist) +
                 "\n------------------------------------------------------------------\n"
             )
-        
+        end_time = datetime.datetime.now()
+        time_diff = end_time - start_time
+        print("Time to apply: " + str(time_diff))
         return result
 
     def displayWriteResults(self, lineToWrite: str):
