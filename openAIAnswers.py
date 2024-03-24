@@ -3,7 +3,7 @@ import os
 import json
 from openai import OpenAI
 
-class letAIAnswerUnansweredQuestions():
+class letOpenAIAnswer():
     def __init__(self):
         self.client = OpenAI()
 
