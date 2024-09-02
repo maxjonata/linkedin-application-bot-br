@@ -162,11 +162,17 @@ def fillCheckboxFields(driver, checkboxFields, errorslist):
                 options.append(driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{i2}]/label").text)
                 if driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{i2}]/input").is_selected():
                     dobreak = True
-        if not dobreak:
-            errorslist.append({"Checkbox Label": label, "Options": options})
+
+            if not dobreak:
+                answered = utils.getAnsweredQuestion(label)
+                if answered is not False and answered[next(iter(answered))] in options:
+                    driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered[next(iter(answered))])+1}]/label").click()
+                else:
+                    errorslist.append({"Checkbox Label": label, "Options": options})
     except Exception as e:
         print(e)
         errorslist.append("Checkbox Field")
+    a = None
 
 def fill_or_check_all_parallel(self, config_local, errorslist):
     functions = [
