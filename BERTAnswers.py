@@ -16,12 +16,13 @@ class letBERTAnswers():
         with torch.no_grad():
             self.modeledAnsweredQuestions = self.model(**self.tokenizedAnsweredQuestionsLabels)
         for question in self.unansweredQuestions:
-            closerAnswer, closestAnswerCosine = self.answer(question)
-            if not closerAnswer:
+            closerQuestion, closerQuestionCosine = self.answer(question)
+            if not closerQuestion:
                 continue
             with open("data/BERTAnswers.json", "a", encoding="utf-8") as file:
-                json.dump({question["Label"]: [closerAnswer, closestAnswerCosine]}, file, ensure_ascii=False)
-                file.write("\n")
+                closerAnswer = next(iter(self.answeredQuestions[self.answeredQuestionsLabels.index(closerQuestion)]))
+                json.dump({question["Label"]: closerAnswer }, file, ensure_ascii=False)
+                file.write("\n" + closerQuestion + ' / ' + str(closerQuestionCosine) + "\n")
 
     def answer(self, questionToAnswer):
         ## Receives a questionToAnswer dict that has a "Label" key with the question, loads the self.answeredQuestionsLabels with the Questions that were already answered and returns the answered question most similar to the queston to answer
@@ -37,7 +38,7 @@ class letBERTAnswers():
             if cosineDistance < closestAnswerCosine:
                 closestAnswerCosine = cosineDistance
                 closestAnswer = self.answeredQuestionsLabels[i]
-        if closestAnswerCosine > 0.011:
+        if closestAnswerCosine > 0.008:
             return False, False
         return closestAnswer, closestAnswerCosine
 

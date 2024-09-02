@@ -439,14 +439,14 @@ def getErrorsListFromJson():
     errorsList = []
     files = ['RadioLabels', 'TextLabels', 'SelectLabels', 'CheckboxLabels']
     for fileName in files:
+        # if fileName != 'CheckboxLabels':
+        #     continue
         try:
             with open(f'data/unanswered{fileName}.json', 'r', encoding="utf-8") as json_file:
                 for line in json_file:
                     with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
                         linha = json.loads(line)
                         if not getAnsweredQuestion(linha['Label']):
-                            if "ncia de pelo menos 2 anos com gestão de times de desenvolvimento" in line:
-                                a = None
                             errorsList.append(linha)
         except:
             pass

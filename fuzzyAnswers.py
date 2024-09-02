@@ -12,16 +12,15 @@ class letFuzzyAnswer():
             if(closerAnswer == False):
                 continue
             answer = {question["Label"]: closerAnswer[next(iter(closerAnswer))]}
-            if closerAnswer and question["Options"] and closerAnswer[next(iter(closerAnswer))] in question["Options"]:
-                continue
-            else:
-                with open("data/fuzzyAnsweredQuestions.json", "a", encoding="utf-8") as file:
-                    file.write(json.dumps(answer, ensure_ascii=False) + "\n")
+            
+            with open("data/fuzzyAnsweredQuestions.json", "a", encoding="utf-8") as file:
+                file.write(json.dumps(answer, ensure_ascii=False) + "\n")
 
     def answer(self, question):
         question
         best_match, score = process.extractOne(question["Label"], self.answeredQuestionsLabels)
-        if(score > 80):
+        option = self.answeredQuestions[self.answeredQuestionsLabels.index(best_match)][best_match]
+        if(score > 90 and (not utils.ifException_False(lambda: question["Options"])() or option in question["Options"])):
             return next(item for item in self.answeredQuestions if next(iter(item)) == best_match)
         else:
             return False
