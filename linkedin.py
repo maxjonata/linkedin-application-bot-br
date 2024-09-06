@@ -8,6 +8,7 @@ import constants
 import config_local
 import platform
 import datetime
+import json
 
 from langdetect import detect
 
@@ -30,64 +31,53 @@ from concurrent.futures import ThreadPoolExecutor
 class Linkedin:
 
     def __init__(self):
+        self.driver = self.startDriver(True)
+        self.JobIDS = {
+            "Applied Jobs": [],
+            "Skipped Jobs": [],
+            "Blacklisted Jobs": [],
+            "Error Jobs": [],
+        }
+
+    def startDriver(self, kills = False):
         browser = config_local.browser[0].lower()
         linkedinEmail = config_local.email
+        if kills:
+            os.system("taskkill /im geckodriver.exe /f")
+            os.system("taskkill /im firefox.exe /f")
         if browser == "firefox":
             if len(linkedinEmail) > 0:
-                print(platform.system())
-                if platform.system == "Linux":
+                if platform.system == "Linux" and config_local.firefoxProfileRootDir == "":
                     prYellow(
                         "On Linux you need to define profile path to run the bot with Firefox. Go about:profiles find root directory of your profile paste in line 8 of config file next to firefoxProfileRootDir "
                     )
                     exit()
                 else:
-                    os.system("taskkill /im geckodriver.exe /f")
-                    os.system("taskkill /im firefox.exe /f")
-                    self.driver = webdriver.Firefox()
-                    self.driver.get(
-                        "https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin"
-                    )
-                    prYellow("Trying to log in linkedin.")
-                    try:
-                        utils.wait_until_visible_and_find(self.driver,
-                            "id", "username").send_keys(linkedinEmail)
-                        utils.wait_until_visible_and_find(self.driver,"id", "password").send_keys(
-                            config_local.password)
-
-                        utils.wait_until_visible_and_find(self.driver,
-                            "xpath",
-                            '//*[@id="organic-div"]/form/div[3]/button').click(
-                            )
-                    except Exception as e:
-                        prRed(e)
+                    driver = webdriver.Firefox()
+                    self.login(driver)
             else:
-                os.system("taskkill /im geckodriver.exe /f")
-                os.system("taskkill /im firefox.exe /f")
-                self.driver = webdriver.Firefox(options=utils.browserOptions())
+                driver = webdriver.Firefox(options=utils.browserOptions())
         elif browser == "chrome":
-            self.driver = webdriver.Chrome(ChromeDriverManager().install())
-            self.driver.get(
+            driver = webdriver.Chrome(ChromeDriverManager().install())
+            self.login(driver)
+            
+        return driver;
+
+    def login(self, driver):
+        driver.get(
                 "https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin"
             )
-            prYellow("Trying to log in linkedin.")
-            try:
-                utils.wait_until_visible_and_find(self.driver,"id",
-                                         "username").send_keys(linkedinEmail)
-                time.sleep(5)
-                utils.wait_until_visible_and_find(self.driver,"id", "password").send_keys(
-                    config_local.password)
-                time.sleep(5)
-                utils.wait_until_visible_and_find(self.driver,
-                    "xpath",
-                    '//*[@id="organic-div"]/form/div[3]/button').click()
-            except:
-                prRed(
-                    "Couldnt log in Linkedin by using chrome please try again for Firefox by creating a firefox profile."
-                )
-
-        # driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-        # webdriver.Chrome(ChromeDriverManager().install())
-        # webdriver.Firefox(options=utils.browserOptions())
+        prYellow("Trying to log in linkedin.")
+        try:
+            utils.wait_until_visible_and_find(driver,"id",
+                                      "username").send_keys(linkedinEmail)
+            utils.wait_until_visible_and_find(driver,"id", "password").send_keys(
+                config_local.password)
+            utils.wait_until_visible_and_find(driver,
+                "xpath",
+                '//*[@id="organic-div"]/form/div[3]/button').click()
+        except:
+            prRed(e)
 
     def generateUrls(self):
         if not os.path.exists("data"):
@@ -123,10 +113,12 @@ class Linkedin:
         button = self.easyApplyButton()
         for blacklistword in config_local.blacklist:
             if blacklistword in jobProperties:
+                self.saveJobId(jobID, "Blacklisted Jobs")
                 print(
                     "Blacklisted word found in url - skipping (" +
                     blacklistword + ")")
                 button = False
+                return countApplied, countJobs
         end_time = datetime.datetime.now()
         time_diff = end_time - start_time
         print("Time to get job properties and button: " + str(time_diff))
@@ -143,22 +135,20 @@ class Linkedin:
         if button is not False:
             try:
                 button.click()
-                # print(0)
                 utils.wait_until_visible_and_find(self.driver, By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]")
                 countApplied += 1
-                # print(4)
-                result = self.applyProcess(offerPage)
+                result = self.applyProcess(offerPage, jobID)
                 lineToWrite = jobProperties + " | " + result
                 self.displayWriteResults(lineToWrite)
-                # print(5)
             except Exception as e2:
-                # print(e2)
+                self.saveJobId(jobID, "Error Jobs")
                 lineToWrite = (
                     jobProperties + " | " +
                     "* 🔴 Cannot apply to this Job! " +
                     str(offerPage))
                 self.displayWriteResults(lineToWrite)
         else:
+            self.saveJobId(jobID, "Skipped Jobs")
             lineToWrite = (jobProperties + " | " +
                             "* 🟡 Already applied or Error to acquire button! Job: " +
                             str(offerPage))
@@ -202,13 +192,14 @@ class Linkedin:
                     offerIds.append(int(offerId.split(":")[-1]))
 
                 for jobID in offerIds:
+                    if self.checkJobId(jobID):
+                        prYellow("💾 Job already visited: " + str(jobID))
+                        continue
                     countApplied, countJobs = self.go_through_offers(jobID, countApplied, countJobs)
 
             prYellow("Category: " + urlWords[0] + "," + urlWords[1] +
                      " applied: " + str(countApplied) + " jobs out of " +
                      str(countJobs) + ".")
-
-        utils.donate(self)
 
     def getJobProperties(self, count):
         textToWrite = ""
@@ -318,7 +309,7 @@ class Linkedin:
         except:
             return False
 
-    def applyProcess(self, offerPage):
+    def applyProcess(self, offerPage, JobId):
         result = ""
         progress = 0
         attempts = 0
@@ -372,8 +363,12 @@ class Linkedin:
             self.driver.find_element(By.XPATH,
                 "//h3[contains(normalize-space(), 'sent')]")
 
+            self.saveJobId(JobId, "Applied Jobs")
             result = "* 🟢 Just Applied to this job: " + str(offerPage)
         except:
+            if len(errorslist) == 0:
+                a = None
+            self.saveJobId(JobId, "Error Jobs")
             result = (
                 "* 🔴 " +
                 " Couldn't apply to this job! Extra info needed. Link: "
@@ -393,12 +388,49 @@ class Linkedin:
             utils.writeResults(lineToWrite)
         except Exception as e:
             prRed("Error in DisplayWriteResults: " + str(e))
+    
+    def saveJobIDS(self):
+        try:
+            previousData = json.loads(open("data/JobIDS.json", encoding="utf-8").read())
+            for key in self.JobIDS:
+                for job in self.JobIDS[key]:
+                    if job not in previousData[key]:
+                        previousData[key].append(job)
+            with open("data/JobIDS.json", "w", encoding="utf--8") as file:
+                json.dump(previousData, file, ensure_ascii=False)
+                prGreen("JobIDS are saved successfully.")
+        except Exception as e:
+            prRed("Error in saveJobIDS: " + str(e))
+    
+    def saveJobId(self, JobId, key):
+        try:
+            previousData = json.loads(open("data/JobIDS.json", encoding="utf-8").read())
+            if JobId not in previousData[key]:
+                previousData[key].append(JobId)
+            with open("data/JobIDS.json", "w", encoding="utf--8") as file:
+                json.dump(previousData, file, ensure_ascii=False)
+                prGreen("JobIDS are saved successfully.")
+        except Exception as e:
+            prRed("Error in saveJobId: " + str(e))
+    
+    def checkJobId(self, JobId):
+        try:
+            previousData = json.loads(open("data/JobIDS.json", encoding="utf-8").read())
+            for key in previousData:
+                if JobId in previousData[key]:
+                    return True
+            return False
+        except Exception as e:
+            prRed("Error in checkJobId: " + str(e))
+            return False
 
 
 start = time.time()
 while True:
     try:
-        Linkedin().linkJobApply()
+        linkedin = Linkedin()
+        linkedin.linkJobApply()
+        linkedin.saveJobIDS()
 
         break
     except Exception as e:
