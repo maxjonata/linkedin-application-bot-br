@@ -89,3 +89,4 @@ HowDidYouHeard = "" #OPTIONAL
 ConsiderMeForFutureOffers = True #true = yes, false = no
 Salary = "" #OPTIONAL
 specificCitySelectOption = "" #OPTIONAL
+aptidoes = "" #NEEDED IF USING createAnswers.py

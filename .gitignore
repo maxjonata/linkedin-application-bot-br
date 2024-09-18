@@ -182,3 +182,6 @@ globalLogicCode.py
 
 #vscode
 .vscode/
+
+#compiledModel
+data/trainedModel/
