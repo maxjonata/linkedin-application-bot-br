@@ -1,8 +1,11 @@
-import utils
 import json
-from transformers import BertTokenizer, BertModel
+
 import torch
 from scipy.spatial.distance import cosine
+from transformers import BertModel, BertTokenizer
+
+import utils
+
 
 class letBERTAnswers():
     def __init__(self):
@@ -11,10 +14,10 @@ class letBERTAnswers():
         self.model = BertModel.from_pretrained(modelName)
         self.answeredQuestions = utils.getAnsweredQuestions()
         self.unansweredQuestions = utils.getErrorsListFromJson()
-        self.answeredQuestionsLabels = list([next(iter(question)) for question in self.answeredQuestions])
+        self.answeredQuestionsLabels = list([question["question"] for question in self.answeredQuestions])
         self.tokenizedAnsweredQuestionsLabels = self.tokenizer(self.answeredQuestionsLabels, padding=True, truncation=True, return_tensors="pt")
         with torch.no_grad():
-            self.modeledAnsweredQuestions = self.model(**self.tokenizedAnsweredQuestionsLabels)
+            self.modeledAnsweredQuestions = self.model(**self.tokenizedAnsweredQuestionsLabels) # type: ignore
         for question in self.unansweredQuestions:
             closerQuestion, closerQuestionCosine = self.answer(question)
             if not closerQuestion:
@@ -28,7 +31,7 @@ class letBERTAnswers():
         ## Receives a questionToAnswer dict that has a "Label" key with the question, loads the self.answeredQuestionsLabels with the Questions that were already answered and returns the answered question most similar to the queston to answer
         tokenizedQuestionToAnswer = self.tokenizer(questionToAnswer["Label"], padding=True, truncation=True, return_tensors="pt")
         with torch.no_grad():
-            modelOutput = self.model(**tokenizedQuestionToAnswer)
+            modelOutput = self.model(**tokenizedQuestionToAnswer) # type: ignore
         questionToAnswerEmbedding = modelOutput.last_hidden_state[0][0]
         closestAnswer = ""
         closestAnswerCosine = 2
@@ -44,4 +47,4 @@ class letBERTAnswers():
 
         
 if __name__ == "__main__":
-    letBERTAnswers = letBERTAnswers()
+    bertAnswers = letBERTAnswers()

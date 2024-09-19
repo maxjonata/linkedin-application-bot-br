@@ -106,14 +106,10 @@ class CreateAnswers:
     class Auxiliaries:
         @staticmethod
         def getAnsweredQuestions() -> list[QATrainingData]:
-            questions: list[QATrainingData] = []
-            with open("data/answeredQuestions.json", "r", encoding="utf-8") as file:
-                for question in json.load(file):
-                    questions.append({
-                        "question": next(iter(question)),
-                        "answer": question[next(iter(question))]
-                    })
-            return questions
+            answerList = []
+            with open('data/answeredQuestions.jsonl', 'r', encoding="utf-8") as json_file:
+                answerList = json.load(json_file)
+            return answerList
         @staticmethod
         def clear_transformers_cache():
             # Obter o diretório home do usuário

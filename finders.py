@@ -9,11 +9,15 @@
 # except:
 #     a = None
 
-import utils
-import config_local
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.common.by import By
+import traceback
 from concurrent.futures import ThreadPoolExecutor
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+
+import config_local
+import utils
+
 
 def check_all_THEN_fill_all(self, config_local, errorslist):
 
@@ -86,12 +90,15 @@ def fillSalary(salaries, config_local, errorslist):
         except:
             errorslist.append("Salary")
 
-def fillPresentationLetter(presentationLetters, errorslist):
-    for presentationLetter in presentationLetters:
-        try:
-            elem.send_keys("./Presentation_Letter.pdf")
-        except:
-            errorslist.append("Presentation Letter")
+def fillPresentationLetter(presentationLetters, errorslist):  
+
+    # TODO: add presentation letter
+    # for presentationLetter in presentationLetters:
+    #     try:
+    #         elem.send_keys("./Presentation_Letter.pdf")
+    #     except:
+    #         errorslist.append("Presentation Letter")
+    return False
 
 def fillTextFields(driver, textFields, errorslist):
     try:
@@ -103,12 +110,15 @@ def fillTextFields(driver, textFields, errorslist):
                 if answered is not False:
                     if answered is None:
                         a = None
-                    input.send_keys(answered[next(iter(answered))])
-                else:
-                    errorslist.append({"Text Label": label})
+                    input.send_keys(answered["answer"]) # type: ignore
     except Exception as e:
-        print(e)
-        errorslist.append("Text Field")
+        traceback.print_exc()
+        if label is not None:
+            errorslist.append({"Text Label": label})
+        else:
+            errorslist.append("Text Field")
+
+
 
 def fillSelectFields(driver, selectFields, errorslist):
     try:
@@ -118,16 +128,16 @@ def fillSelectFields(driver, selectFields, errorslist):
                 label = driver.find_elements(By.XPATH, "//*[@data-test-text-entity-list-form-component]//label/span[1]")[i].text
                 options = [option.text for option in select.find_elements(By.TAG_NAME, "option")]
                 answered = utils.getAnsweredQuestion(label)
-                if answered is not False and answered[label] in options:
-                    if answered is None:
-                        a = None
+                if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
                     select = Select(select)
-                    select.select_by_visible_text(answered[next(iter(answered))])
-                else:
-                    errorslist.append({"Select Label": label, "Options": options})
+                    select.select_by_visible_text(answered["answer"]) # type: ignore
     except Exception as e:
-        print(e)
-        errorslist.append("Select Field")
+        traceback.print_exc()
+        if label is not None:
+            errorslist.append({"Select Label": label})
+        else:
+            errorslist.append("Select Field")
+
 
 def fillRadioFields(driver, radioFields, errorslist):
     try:
@@ -143,14 +153,18 @@ def fillRadioFields(driver, radioFields, errorslist):
 
             if not dobreak:
                 answered = utils.getAnsweredQuestion(label)
-                if answered is not False and answered[next(iter(answered))] in options:
-                    driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered[next(iter(answered))])+1}]/label").click()
+                if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                    driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
                 else:
                     errorslist.append({"Radio Label": label, "Options": options})
 
     except Exception as e:
-        print(e)
-        errorslist.append("Radio Field")
+        traceback.print_exc()
+        if label is not None:
+            errorslist.append({"Radio Label": label})
+        else:
+            errorslist.append("Radio Field")
+
 
 def fillCheckboxFields(driver, checkboxFields, errorslist):
     try:
@@ -165,14 +179,17 @@ def fillCheckboxFields(driver, checkboxFields, errorslist):
 
             if not dobreak:
                 answered = utils.getAnsweredQuestion(label)
-                if answered is not False and answered[next(iter(answered))] in options:
-                    driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered[next(iter(answered))])+1}]/label").click()
+                if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                    driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
                 else:
                     errorslist.append({"Checkbox Label": label, "Options": options})
     except Exception as e:
-        print(e)
-        errorslist.append("Checkbox Field")
-    a = None
+        traceback.print_exc()
+        if label is not None:
+            errorslist.append({"Checkbox Label": label})
+        else:
+            errorslist.append("Checkbox Field")
+
 
 def fill_or_check_all_parallel(self, config_local, errorslist):
     functions = [
@@ -329,6 +346,3 @@ def check_radio_fields(self, errorslist):
     except Exception as e:
         print(e)
         a = None
-
-
-#########################################################################################

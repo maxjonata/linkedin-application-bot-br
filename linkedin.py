@@ -1,32 +1,31 @@
-import time
-import math
-import random
-import os
-import utils
-import finders
-import constants
-import config_local
-import platform
 import datetime
 import json
+import math
+import os
+import platform
+import random
+import time
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 
-from langdetect import detect
-
-from selenium import webdriver
-from selenium.webdriver.support.wait import WebDriverWait
 import selenium.webdriver.support.expected_conditions as EC
+from langdetect import detect
+from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from utils import prRed, prYellow, prGreen
-
-from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
-import os
 
-from concurrent.futures import ThreadPoolExecutor
+import config_local
+import constants
+import finders
+import utils
+from utils import prGreen, prRed, prYellow
+
 
 class Linkedin:
 
@@ -70,7 +69,7 @@ class Linkedin:
         prYellow("Trying to log in linkedin.")
         try:
             utils.wait_until_visible_and_find(driver,"id",
-                                      "username").send_keys(linkedinEmail)
+                                      "username").send_keys(config_local.email)
             utils.wait_until_visible_and_find(driver,"id", "password").send_keys(
                 config_local.password)
             utils.wait_until_visible_and_find(driver,
@@ -192,9 +191,9 @@ class Linkedin:
                     offerIds.append(int(offerId.split(":")[-1]))
 
                 for jobID in offerIds:
-                    if self.checkJobId(jobID):
-                        prYellow("💾 Job already visited: " + str(jobID))
-                        continue
+                    # if self.checkJobId(jobID):
+                    #     prYellow("💾 Job already visited: " + str(jobID))
+                    #     continue
                     countApplied, countJobs = self.go_through_offers(jobID, countApplied, countJobs)
 
             prYellow("Category: " + urlWords[0] + "," + urlWords[1] +
@@ -317,43 +316,48 @@ class Linkedin:
         start_time = datetime.datetime.now()
         try:
             while self.submitFound(errorslist) == False and attempts < 1:
-                # print(1)
                 try:
                     barNow = utils.wait_until_visible_and_find(self.driver,
                         By.XPATH, "//progress").get_attribute("aria-valuenow")
                 except Exception as e:
                     print("Error in getting BAR: " + str(e))
+
                 if int(progress) == int(barNow):
                     attempts += 1
                 else:
                     attempts = 0
-                # print(2)
-                errorslist = []
+                    errorslist = []
                 progress = barNow
                 
-                while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
-                    button = None
-                    try:
-                        button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]")
-                    except:
+                try:
+                    while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
+                        button = None
                         try:
-                            button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]")
+                            button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]")
                         except:
                             try:
-                                button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]")
-                                if config_local.followCompanies is False:
-                                    try:
-                                        self.driver.find_element(
-                                            By.CSS_SELECTOR,
-                                            "label[for='follow-company-checkbox']").click()
-                                    except:
-                                        a = None
+                                button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]")
                             except:
-                                a = None
-                    finders.continueNextStep([button], errorslist)
-                finders.check_all_THEN_fill_all(self, config_local, errorslist)
+                                try:
+                                    button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]")
+                                    if config_local.followCompanies is False:
+                                        try:
+                                            self.driver.find_element(
+                                                By.CSS_SELECTOR,
+                                                "label[for='follow-company-checkbox']").click()
+                                        except:
+                                            a = None
+                                except:
+                                    a = None
+                        finders.continueNextStep([button], errorslist)
+                    finders.check_all_THEN_fill_all(self, config_local, errorslist)
+                except Exception as e:
+                    prRed("Error in buttons")
+                    traceback.print_exc()
+                    pass
                 # print(3)
             try:
+
                 self.driver.find_element(
                     By.CSS_SELECTOR,
                     "button[aria-label='Submit application']").click()

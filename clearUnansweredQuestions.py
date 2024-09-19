@@ -1,9 +1,10 @@
-import utils
 import json
+
+import utils
+
 
 class clearUnansweredQuestions():
     def __init__(self):
-        self.answeredQuestions = utils.getAnsweredQuestions()
         self.unansweredQuestions = utils.getErrorsListFromJson()
         files = ['RadioLabels', 'TextLabels', 'SelectLabels', 'CheckboxLabels']
         for fileName in files:

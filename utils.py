@@ -1,14 +1,26 @@
-import math,constants,config_local as config
-from typing import List
-import time
 import json
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from concurrent.futures import ThreadPoolExecutor
+import math
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, TypedDict, Union
 
+from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
+
+import config_local as config
+import constants
+
+
+class QuestionAnswer(TypedDict):
+    question: str
+    answer: Union[str, int]
+
+class QuestionUnanswered(TypedDict):
+    Label: str
+    answer: Union[str, int]
 
 def browserOptions():
     options = Options()
@@ -410,7 +422,7 @@ def storeUnansweredJson(fileName, error):
             newError[key] = error[key]
     #Check for duplicates only if the file exists
     try:
-        with open(f'data/unanswered{fileName}.json', 'r', encoding="utf-8") as json_file:
+        with open(f'data/unanswered{fileName}.jsonl', 'r', encoding="utf-8") as json_file:
             for line in json_file:
                 if newError == json.loads(line):
                     return
@@ -418,7 +430,7 @@ def storeUnansweredJson(fileName, error):
         pass
 
     #Save the data
-    with open(f'data/unanswered{fileName}.json', 'a', encoding="utf-8") as json_file:
+    with open(f'data/unanswered{fileName}.jsonl', 'a', encoding="utf-8") as json_file:
         json_file.write(json.dumps(newError, ensure_ascii=False) + "\n")
 
 def storeUnansweredData(errorsList):
@@ -435,92 +447,56 @@ def storeUnansweredData(errorsList):
     # TODO log that the errors were stored in the file
     # TODO log errors that were not stored in the file
 
-def getErrorsListFromJson():
-    errorsList = []
+def getErrorsListFromJson() -> list[QuestionUnanswered]:
+    localErrorsList = []
     files = ['RadioLabels', 'TextLabels', 'SelectLabels', 'CheckboxLabels']
     for fileName in files:
         # if fileName != 'CheckboxLabels':
         #     continue
         try:
-            with open(f'data/unanswered{fileName}.json', 'r', encoding="utf-8") as json_file:
+            with open(f'data/unanswered{fileName}.jsonl', 'r', encoding="utf-8") as json_file:
                 for line in json_file:
-                    with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
+                    with open('data/answeredQuestions.jsonl', 'r', encoding="utf-8") as answered_file:
                         linha = json.loads(line)
                         if not getAnsweredQuestion(linha['Label']):
-                            errorsList.append(linha)
+                            localErrorsList.append(linha)
         except:
             pass
-    # try:
-    #     with open('data/unansweredRadioLabels.json', 'r', encoding="utf-8") as json_file:
-    #         for line in json_file:
-    #             with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
-    #                 if not getAnsweredQuestion(json.loads(line)['Label']):
-    #                     if "ncia de pelo menos 2 anos com gestão de times de desenvolvimento" in line:
-    #                         a = None
-    #                     errorsList.append(json.loads(line))
-    # except:
-    #     pass
-    # try:
-    #     with open('data/unansweredTextLabels.json', 'r', encoding="utf-8") as json_file:
-    #         for line in json_file:
-    #             with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
-    #                 if not getAnsweredQuestion(json.loads(line)['Label']):
-    #                     if "ncia de pelo menos 2 anos com gestão de times de desenvolvimento" in line:
-    #                         a = None
-    #                     errorsList.append(json.loads(line))
-    # except:
-    #     pass
-    # try:    
-    #     with open('data/unansweredSelectLabels.json', 'r', encoding="utf-8") as json_file:
-    #         for line in json_file:
-    #             with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
-    #                 if getAnsweredQuestion(json.loads(line)['Label']):
-    #                     continue
-    #             errorsList.append(json.loads(line))
-    # except:
-    #     pass
-    # try:    
-    #     with open('data/unansweredCheckboxLabels.json', 'r', encoding="utf-8") as json_file:
-    #         for line in json_file:
-    #             # with open('data/answeredQuestions.json', 'r', encoding="utf-8") as answered_file:
-    #             #     if getAnsweredQuestion(json.loads(line)['Label']):
-    #             #         continue
-    #             errorsList.append(json.loads(line))
-    # except:
-    #     pass
-    return errorsList
+    return localErrorsList
 
-def saveAnsweredQuestions(QuestionAnswer_List: List[dict]):
-    with open('data/answeredQuestions.json', 'a', encoding="utf-8") as json_file:
+def saveAnsweredQuestions(QuestionAnswer_List: QuestionAnswer):
+    with open('data/answeredQuestions.jsonl', 'a', encoding="utf-8") as json_file:
         for questionAnswer in QuestionAnswer_List:
             json_file.write(json.dumps(questionAnswer, ensure_ascii=False) + "\n")
 
-def saveAnsweredQuestion(QuestionAnswer: dict):
-    with open('data/answeredQuestions.json', 'a', encoding="utf-8") as json_file:
+def saveAnsweredQuestion(QuestionAnswer: QuestionAnswer):
+    with open('data/answeredQuestions.jsonl', 'a', encoding="utf-8") as json_file:
         json_file.write(json.dumps(QuestionAnswer, ensure_ascii=False) + "\n")
 
-def getAnsweredQuestion(label: str):
+def getAnsweredQuestion(label: str) -> Union[QuestionAnswer, bool] :
     try:
-        with open('data/answeredQuestions.json', 'r', encoding="utf-8") as json_file:
-            for line in json_file:
-                line = line.replace("\n", "")
-                line = PadronizeSpaces(line)
-                label = PadronizeSpaces(label)
-                answerDict = json.loads(line)
-                for dictLabel in answerDict:
-                    if label in dictLabel:
-                        return json.loads(line)
-    except:
-        pass
+        with open('data/answeredQuestions.jsonl', 'r', encoding="utf-8") as json_file:
+            counter = 0
+            answerList = []
+            for file in json_file:
+                counter += 1
+                answerList.append(json.loads(file))
+            for line in answerList:
+                if line["question"] == label:
+                    line["question"] = PadronizeSpaces(line["question"])
+                    line["answer"] = PadronizeSpaces(line["answer"])
+                    return line
+    except Exception as e:
+        prYellow(f"Excetion in Line: {counter} from file: answeredQuestions.jsonl")
+        raise e
     
     return False
 
-def getAnsweredQuestions():
-    list = []
-    with open('data/answeredQuestions.json', 'r', encoding="utf-8") as json_file:
-        for line in json_file:
-            list.append(json.loads(line))
-    return list
+def getAnsweredQuestions() -> list[QuestionAnswer]: #TODO: Fix the functions that use this function to use the new format
+    answerList = []
+    with open('data/answeredQuestions.jsonl', 'r', encoding="utf-8") as json_file:
+        answerList = json.load(json_file)
+    return answerList
 
 def PadronizeSpaces(texto):
     # Remove extra spaces before and after commas
