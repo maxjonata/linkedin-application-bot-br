@@ -1,14 +1,3 @@
-# so this kinda works but i need real logic in here
-
-# try:
-#     # default years of experiance
-#     for elem in utils.wait_until_visible_and_find_all(self.driver,By.CSS_SELECTOR, 'input'):
-#         elem.clear()
-#         elem.send_keys(2)
-#         time.sleep(random.uniform(1, constants.botSpeed))
-# except:
-#     a = None
-
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
@@ -108,11 +97,9 @@ def fillTextFields(driver, textFields, errorslist):
                 label = driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//label")[i].text
                 answered = utils.getAnsweredQuestion(label)
                 if answered is not False:
-                    if answered is None:
-                        a = None
                     input.send_keys(answered["answer"]) # type: ignore
     except Exception as e:
-        traceback.print_exc()
+        print(e)
         if label is not None:
             errorslist.append({"Text Label": label})
         else:
@@ -132,7 +119,7 @@ def fillSelectFields(driver, selectFields, errorslist):
                     select = Select(select)
                     select.select_by_visible_text(answered["answer"]) # type: ignore
     except Exception as e:
-        traceback.print_exc()
+        print(e)
         if label is not None:
             errorslist.append({"Select Label": label})
         else:
@@ -159,7 +146,7 @@ def fillRadioFields(driver, radioFields, errorslist):
                     errorslist.append({"Radio Label": label, "Options": options})
 
     except Exception as e:
-        traceback.print_exc()
+        print(e)
         if label is not None:
             errorslist.append({"Radio Label": label})
         else:
@@ -184,14 +171,14 @@ def fillCheckboxFields(driver, checkboxFields, errorslist):
                 else:
                     errorslist.append({"Checkbox Label": label, "Options": options})
     except Exception as e:
-        traceback.print_exc()
+        print(e)
         if label is not None:
             errorslist.append({"Checkbox Label": label})
         else:
             errorslist.append("Checkbox Field")
 
 
-def fill_or_check_all_parallel(self, config_local, errorslist):
+def check_and_fill_all_parallel(self, config_local, errorslist):
     functions = [
         check_and_fill_city, check_and_fill_salary,
         check_and_fill_presentation_letter, check_and_continue_next_step,
@@ -202,7 +189,7 @@ def fill_or_check_all_parallel(self, config_local, errorslist):
         for function in functions:
             executor.submit(function, self, config_local, errorslist)
 
-def fill_or_check_all(self, config_local, errorslist):
+def check_and_fill_all(self, config_local, errorslist):
     check_and_fill_city(self, config_local, errorslist)
     check_and_fill_salary(self, config_local, errorslist)
     check_and_fill_presentation_letter(self, errorslist)
@@ -226,7 +213,7 @@ def check_and_fill_city(self, config_local, errorslist):
                 "//div/div[contains(@class, 'jobs-easy-apply-modal')]//span/span[contains(normalize-space(), '"+config_local.specificCitySelectOption+"')]"
             )
     except Exception as e:
-        a = None
+        errorslist.append("City")
 
 
 def check_and_fill_salary(self, config_local, errorslist):

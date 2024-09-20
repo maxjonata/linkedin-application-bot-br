@@ -104,7 +104,7 @@ class Linkedin:
                 if utils.wait_until_visible_and_find(self.driver, By.XPATH, "//*[contains(@class,'jobs-post-job')]") is not False:
                     break
             except:
-                a = None
+                prRed("Error in going through offers: " + str(e))
 
         countJobs += 1
 
@@ -271,12 +271,13 @@ class Linkedin:
                     return clickableButtonFound
                 if buttonFound is not False and clickableButtonFound is False:
                     self.driver.refresh()
-        except:
-            a = None
+        except Exception as e:
+            print(e)
+            prRed("Error in easyApplyButton")
             return False
 
+
     def submitFound(self, errorslist):
-        # print(7)
         try:
             while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
                 button = None
@@ -294,18 +295,18 @@ class Linkedin:
                                         By.CSS_SELECTOR,
                                         "label[for='follow-company-checkbox']").click()
                                 except:
-                                    a = None
+                                    pass
                         except:
-                            a = None
+                            pass
                 finders.continueNextStep([button], errorslist)
-        except:
-            a = None
-        # print(8)
+        except Exception as e:
+            print(e)
+            prRed("Error in submitFound")
         try:
             utils.wait_until_visible_and_find(self.driver, By.XPATH, "//h3[contains(normalize-space(), 'Your application was sent')]")
-            
             return True
         except:
+            prRed("Error in submitFound sent")
             return False
 
     def applyProcess(self, offerPage, JobId):
@@ -315,63 +316,45 @@ class Linkedin:
         errorslist = []
         start_time = datetime.datetime.now()
         try:
-            while self.submitFound(errorslist) == False and attempts < 1:
-                try:
-                    barNow = utils.wait_until_visible_and_find(self.driver,
-                        By.XPATH, "//progress").get_attribute("aria-valuenow")
-                except Exception as e:
-                    print("Error in getting BAR: " + str(e))
+            try:
+                while self.submitFound(errorslist) == False and attempts < 1:
+                    try:
+                        barNow = utils.wait_until_visible_and_find(self.driver,
+                            By.XPATH, "//progress").get_attribute("aria-valuenow")
+                    except Exception as e:
+                        print("Error in getting BAR: " + str(e))
 
-                if int(progress) == int(barNow):
-                    attempts += 1
-                else:
-                    attempts = 0
-                    errorslist = []
-                progress = barNow
-                
-                try:
-                    while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
-                        button = None
-                        try:
-                            button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]")
-                        except:
-                            try:
-                                button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]")
-                            except:
-                                try:
-                                    button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]")
-                                    if config_local.followCompanies is False:
-                                        try:
-                                            self.driver.find_element(
-                                                By.CSS_SELECTOR,
-                                                "label[for='follow-company-checkbox']").click()
-                                        except:
-                                            a = None
-                                except:
-                                    a = None
-                        finders.continueNextStep([button], errorslist)
+                    if int(progress) == int(barNow):
+                        attempts += 1
+                    else:
+                        attempts = 0
+                        errorslist = []
+                    progress = barNow
+                    
                     finders.check_all_THEN_fill_all(self, config_local, errorslist)
-                except Exception as e:
-                    prRed("Error in buttons")
-                    traceback.print_exc()
-                    pass
-                # print(3)
+            except Exception as e:
+                print(e)
+                prRed(f"Error applying page with {attempts} attempts")
+                
             try:
 
                 self.driver.find_element(
                     By.CSS_SELECTOR,
                     "button[aria-label='Submit application']").click()
             except:
-                a = None
+                print(e)
+                print("Error in submit application")
 
             self.driver.find_element(By.XPATH,
                 "//h3[contains(normalize-space(), 'sent')]")
 
+
             self.saveJobId(JobId, "Applied Jobs")
             result = "* 🟢 Just Applied to this job: " + str(offerPage)
-        except:
+        except Exception as e:
             if len(errorslist) == 0:
-                a = None
+                print(e)
+                print("Error in applyProcess: " + str(e))
             self.saveJobId(JobId, "Error Jobs")
             result = (
                 "* 🔴 " +
