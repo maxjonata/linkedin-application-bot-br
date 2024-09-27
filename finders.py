@@ -23,7 +23,8 @@ def check_all_THEN_fill_all(self, config_local, errorslist):
             {"By": By.XPATH, "locator_value": "//*[@data-test-form-builder-radio-button-form-component][not(contains(@id, 'error'))]"},
             {"By": By.XPATH, "locator_value": "//*[@data-test-text-entity-list-form-component][not(contains(@id, 'error'))]"},
             {"By": By.XPATH, "locator_value": "//*[@data-test-single-line-text-form-component][not(contains(@id, 'error'))]"},
-            {"By": By.XPATH, "locator_value": "//*[contains(@id, 'checkbox-form-component')][not(contains(@id, 'error'))]"}
+            {"By": By.XPATH, "locator_value": "//*[contains(@id, 'checkbox-form-component')][not(contains(@id, 'error'))]"},
+            {"By": By.XPATH, "locator_value": "//*[@data-test-multiline-text-form-component][not(contains(@id, 'error'))]"},
         ]
     )
 
@@ -43,6 +44,8 @@ def check_all_THEN_fill_all(self, config_local, errorslist):
               fillTextFields(self.driver, results[i], errorslist)
           elif i == 6:
               fillCheckboxFields(self.driver, results[i], errorslist)
+          elif i == 7:
+              fillMultiLineTextFields(self.driver, results[i], errorslist)
     
     utils.storeUnansweredData(errorslist)
     
@@ -88,6 +91,26 @@ def fillPresentationLetter(presentationLetters, errorslist):
     #     except:
     #         errorslist.append("Presentation Letter")
     return False
+
+def fillMultiLineTextFields(driver, multiLineTextFields, errorslist):
+    try:
+        for i in range(len(multiLineTextFields)):
+            input = driver.find_elements(By.XPATH, "//*[@data-test-multiline-text-form-component]//textarea")[i]
+            # if input.get_attribute("value") == "":
+            if True:
+                label = driver.find_elements(By.XPATH, "//*[@data-test-multiline-text-form-component]//label")[i].text
+                answered = utils.getAnsweredQuestion(label)
+                if answered is not False:
+                    input.clear()
+                    input.send_keys(answered["answer"]) # type: ignore
+                else:
+                    errorslist.append({"MultiLine Text Label": label})
+    except Exception as e:
+        print(e)
+        if label is not None:
+            errorslist.append({"MultiLine Text Label": label})
+        else:
+            errorslist.append("MultiLine Text Field")
 
 def fillTextFields(driver, textFields, errorslist):
     try:
