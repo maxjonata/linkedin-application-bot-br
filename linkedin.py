@@ -103,8 +103,7 @@ class Linkedin:
 
         while True:
             # Insert job URL here for fine debugging if needed
-            # self.driver.get(offerPage)
-            self.driver.get("https://www.linkedin.com/jobs/view/4034492199/") #TODO: remove this
+            self.driver.get(offerPage)
             try:
                 if utils.wait_until_visible_and_find(
                         self.driver, By.XPATH,
