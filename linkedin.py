@@ -38,7 +38,7 @@ class Linkedin:
             "Error Jobs": [],
         }
 
-    def startDriver(self, kills = False):
+    def startDriver(self, kills=False):
         browser = config_local.browser[0].lower()
         linkedinEmail = config_local.email
         if kills:
@@ -59,21 +59,21 @@ class Linkedin:
         elif browser == "chrome":
             driver = webdriver.Chrome(ChromeDriverManager().install())
             self.login(driver)
-            
-        return driver;
+
+        return driver
 
     def login(self, driver):
         driver.get(
-                "https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin"
-            )
+            "https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin"
+        )
         prYellow("Trying to log in linkedin.")
         try:
-            utils.wait_until_visible_and_find(driver,"id",
-                                      "username").send_keys(config_local.email)
-            utils.wait_until_visible_and_find(driver,"id", "password").send_keys(
-                config_local.password)
-            utils.wait_until_visible_and_find(driver,
-                "xpath",
+            utils.wait_until_visible_and_find(
+                driver, "id", "username").send_keys(config_local.email)
+            utils.wait_until_visible_and_find(
+                driver, "id", "password").send_keys(config_local.password)
+            utils.wait_until_visible_and_find(
+                driver, "xpath",
                 '//*[@id="organic-div"]/form/div[3]/button').click()
         except:
             prRed(e)
@@ -83,15 +83,18 @@ class Linkedin:
             os.makedirs("data")
         try:
             with open("data/urlData.txt", "w", encoding="utf-8") as file:
-                linkedinJobLinks = utils.LinkedinUrlGenerate().generateUrlLinks()
+                linkedinJobLinks = utils.LinkedinUrlGenerate(
+                ).generateUrlLinks()
                 for url in linkedinJobLinks:
                     file.write(url + "\n")
-            prGreen("Urls are created successfully, now the bot will visit those urls.")
+            prGreen(
+                "Urls are created successfully, now the bot will visit those urls."
+            )
         except:
             prRed(
                 "Couldnt generate url, make sure you have /data folder and modified config_local.py file for your preferances."
             )
-    
+
     def go_through_offers(self, jobID, countApplied, countJobs):
         # need to get a better page
         start_time = datetime.datetime.now()
@@ -99,9 +102,13 @@ class Linkedin:
             str(jobID)
 
         while True:
-            self.driver.get(offerPage)
+            # Insert job URL here for fine debugging if needed
+            # self.driver.get(offerPage)
+            self.driver.get("https://www.linkedin.com/jobs/view/4034492199/") #TODO: remove this
             try:
-                if utils.wait_until_visible_and_find(self.driver, By.XPATH, "//*[contains(@class,'jobs-post-job')]") is not False:
+                if utils.wait_until_visible_and_find(
+                        self.driver, By.XPATH,
+                        "//*[contains(@class,'jobs-post-job')]") is not False:
                     break
             except:
                 prRed("Error in going through offers: " + str(e))
@@ -113,17 +120,15 @@ class Linkedin:
         for blacklistword in config_local.blacklist:
             if blacklistword in jobProperties:
                 self.saveJobId(jobID, "Blacklisted Jobs")
-                print(
-                    "Blacklisted word found in url - skipping (" +
-                    blacklistword + ")")
+                print("Blacklisted word found in url - skipping (" +
+                      blacklistword + ")")
                 button = False
                 return countApplied, countJobs
         end_time = datetime.datetime.now()
         time_diff = end_time - start_time
         print("Time to get job properties and button: " + str(time_diff))
         description = self.driver.find_element(
-            By.XPATH,
-            "//article[contains(@class, 'jobs-description')]/div"
+            By.XPATH, "//article[contains(@class, 'jobs-description')]/div"
         ).get_attribute("innerText")
         # To filter by language choose abbreviations here: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
         # if detect(description) != "en":
@@ -134,23 +139,25 @@ class Linkedin:
         if button is not False:
             try:
                 button.click()
-                utils.wait_until_visible_and_find(self.driver, By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]")
+                utils.wait_until_visible_and_find(
+                    self.driver, By.XPATH,
+                    "//div/div[contains(@class, 'jobs-easy-apply-modal')]")
                 countApplied += 1
                 result = self.applyProcess(offerPage, jobID)
                 lineToWrite = jobProperties + " | " + result
                 self.displayWriteResults(lineToWrite)
             except Exception as e2:
                 self.saveJobId(jobID, "Error Jobs")
-                lineToWrite = (
-                    jobProperties + " | " +
-                    "* 🔴 Cannot apply to this Job! " +
-                    str(offerPage))
+                lineToWrite = (jobProperties + " | " +
+                               "* 🔴 Cannot apply to this Job! " +
+                               str(offerPage))
                 self.displayWriteResults(lineToWrite)
         else:
             self.saveJobId(jobID, "Skipped Jobs")
-            lineToWrite = (jobProperties + " | " +
-                            "* 🟡 Already applied or Error to acquire button! Job: " +
-                            str(offerPage))
+            lineToWrite = (
+                jobProperties + " | " +
+                "* 🟡 Already applied or Error to acquire button! Job: " +
+                str(offerPage))
             self.displayWriteResults(lineToWrite)
         return countApplied, countJobs
 
@@ -164,7 +171,8 @@ class Linkedin:
         for url in urlData:
             self.driver.get(url)
 
-            totalJobs = utils.wait_until_visible_and_find(self.driver,By.XPATH, "//small").text
+            totalJobs = utils.wait_until_visible_and_find(
+                self.driver, By.XPATH, "//small").text
             totalPages = utils.jobsToPages(totalJobs)
 
             urlWords = utils.urlToKeywords(url)
@@ -180,8 +188,8 @@ class Linkedin:
                 time.sleep(random.uniform(1, constants.botSpeed))
 
                 try:
-                    offersPerPage = utils.wait_until_visible_and_find_all(self.driver,
-                        By.XPATH, "//li[@data-occludable-job-id]")
+                    offersPerPage = utils.wait_until_visible_and_find_all(
+                        self.driver, By.XPATH, "//li[@data-occludable-job-id]")
                 except:
                     continue
 
@@ -194,7 +202,8 @@ class Linkedin:
                     # if self.checkJobId(jobID):
                     #     prYellow("💾 Job already visited: " + str(jobID))
                     #     continue
-                    countApplied, countJobs = self.go_through_offers(jobID, countApplied, countJobs)
+                    countApplied, countJobs = self.go_through_offers(
+                        jobID, countApplied, countJobs)
 
             prYellow("Category: " + urlWords[0] + "," + urlWords[1] +
                      " applied: " + str(countApplied) + " jobs out of " +
@@ -210,8 +219,9 @@ class Linkedin:
         jobApplications = ""
 
         try:
-            jobTitle = (utils.wait_until_visible_and_find(self.driver,
-                By.XPATH, "//h1[contains(@class, 'job-title')]").get_attribute(
+            jobTitle = (utils.wait_until_visible_and_find(
+                self.driver, By.XPATH,
+                "//h1[contains(@class, 'job-title')]").get_attribute(
                     "innerText").strip())
         except Exception as e:
             # prYellow("Warning in getting jobTitle: " + str(e)[0:50])
@@ -263,8 +273,16 @@ class Linkedin:
     def easyApplyButton(self):
         try:
             while True:
-                buttonFound = utils.ifException_False(utils.wait_until_visible_and_find)(self.driver, By.XPATH, '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(normalize-space(), "Easy Apply")]/parent::button')
-                clickableButtonFound = utils.ifException_False(utils.wait_until_clickable_and_find)(self.driver, By.XPATH, '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(normalize-space(), "Easy Apply")]/parent::button')
+                buttonFound = utils.ifException_False(
+                    utils.wait_until_visible_and_find
+                )(self.driver, By.XPATH,
+                  '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(normalize-space(), "Easy Apply")]/parent::button'
+                  )
+                clickableButtonFound = utils.ifException_False(
+                    utils.wait_until_clickable_and_find
+                )(self.driver, By.XPATH,
+                  '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(normalize-space(), "Easy Apply")]/parent::button'
+                  )
                 if buttonFound is False:
                     return False
                 if buttonFound is not False and clickableButtonFound is not False:
@@ -276,90 +294,69 @@ class Linkedin:
             prRed("Error in easyApplyButton")
             return False
 
-
-    def submitFound(self, errorslist):
-        try:
-            while not utils.elementCanBeFound(self.driver, By.XPATH, '//*[contains(@class, "artdeco-inline-feedback__message")]'):
-                button = None
+    def submitFound(self, errorslist=[]):
+        button = False
+        XPATH = [
+            "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]",
+            "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]",
+            "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]"
+        ]
+        while not utils.elementCanBeFound(
+                self.driver, By.XPATH,
+                '//*[contains(@class, "artdeco-inline-feedback__message")]'):
+            for i in range(len(XPATH)):
                 try:
-                    button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Next')]")
-                except:
-                    try:
-                        button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Review')]")
-                    except:
-                        try:
-                            button = self.driver.find_element(By.XPATH, "//div/div[contains(@class, 'jobs-easy-apply-modal')]//button[contains(normalize-space(), 'Submit')]")
-                            if config_local.followCompanies is False:
-                                try:
-                                    self.driver.find_element(
-                                        By.CSS_SELECTOR,
-                                        "label[for='follow-company-checkbox']").click()
-                                except:
-                                    pass
-                        except:
-                            pass
-                finders.continueNextStep([button], errorslist)
-        except Exception as e:
-            print(e)
-            prRed("Error in submitFound")
+                    button = self.driver.find_element(By.XPATH, XPATH[i])
+                    if button.is_enabled():
+                        button.click()
+                except Exception as e:
+                    # prRed('Submit found button search error')
+                    pass
+
         try:
-            utils.wait_until_visible_and_find(self.driver, By.XPATH, "//h3[contains(normalize-space(), 'Your application was sent')]")
+            utils.wait_until_visible_and_find(
+                self.driver, By.XPATH,
+                "//h3[contains(normalize-space(), 'Your application was sent')]"
+            )
             return True
         except:
-            prRed("Error in submitFound sent")
+            # prRed("Error in submitFound sent")
             return False
 
     def applyProcess(self, offerPage, JobId):
         result = ""
-        progress = 0
-        attempts = 0
-        errorslist = []
+        progress = -1
         start_time = datetime.datetime.now()
+        errorslist = []
+
+        def getProgressNow():
+            try:
+                return int(utils.wait_until_visible_and_find(self.driver, By.XPATH, "//progress").get_attribute("aria-valuenow"))
+            except:
+                return 100
+
         try:
             try:
-                while self.submitFound(errorslist) == False and attempts < 1:
-                    try:
-                        barNow = utils.wait_until_visible_and_find(self.driver,
-                            By.XPATH, "//progress").get_attribute("aria-valuenow")
-                    except Exception as e:
-                        print("Error in getting BAR: " + str(e))
-
-                    if int(progress) == int(barNow):
-                        attempts += 1
-                    else:
-                        attempts = 0
-                        errorslist = []
-                    progress = barNow
-                    
-                    finders.check_all_THEN_fill_all(self, config_local, errorslist)
+                while not self.submitFound() and int(progress) != getProgressNow():
+                    progress = getProgressNow()
+                    finders.check_all_THEN_fill_all(self, config_local,
+                                                    errorslist)
             except Exception as e:
-                print(e)
-                prRed(f"Error applying page with {attempts} attempts")
-                
-            try:
+                prRed(f"Error applying page in percentage: {progress}")
 
-                self.driver.find_element(
-                    By.CSS_SELECTOR,
-                    "button[aria-label='Submit application']").click()
-            except:
-                print(e)
-                print("Error in submit application")
-
-            self.driver.find_element(By.XPATH,
-                "//h3[contains(normalize-space(), 'sent')]")
-
+            if len(errorslist) > 0:
+                raise Exception(errorslist)
 
             self.saveJobId(JobId, "Applied Jobs")
             result = "* 🟢 Just Applied to this job: " + str(offerPage)
         except Exception as e:
             if len(errorslist) == 0:
-                print(e)
-                print("Error in applyProcess: " + str(e))
+                prRed("Error in applyProcess")
             self.saveJobId(JobId, "Error Jobs")
             result = (
                 "* 🔴 " +
-                " Couldn't apply to this job! Extra info needed. Link: "
-                + str(offerPage) +
+                " Couldn't apply to this job! Extra info needed. Link: " +
+                str(offerPage) +
                 "\n--------------------------- errorList -----------------------------\n"
                 + str(errorslist) +
                 "\n------------------------------------------------------------------\n"
@@ -375,10 +372,11 @@ class Linkedin:
             utils.writeResults(lineToWrite)
         except Exception as e:
             prRed("Error in DisplayWriteResults: " + str(e))
-    
+
     def saveJobIDS(self):
         try:
-            previousData = json.loads(open("data/JobIDS.json", encoding="utf-8").read())
+            previousData = json.loads(
+                open("data/JobIDS.json", encoding="utf-8").read())
             for key in self.JobIDS:
                 for job in self.JobIDS[key]:
                     if job not in previousData[key]:
@@ -388,10 +386,11 @@ class Linkedin:
                 prGreen("JobIDS are saved successfully.")
         except Exception as e:
             prRed("Error in saveJobIDS: " + str(e))
-    
+
     def saveJobId(self, JobId, key):
         try:
-            previousData = json.loads(open("data/JobIDS.json", encoding="utf-8").read())
+            previousData = json.loads(
+                open("data/JobIDS.json", encoding="utf-8").read())
             if JobId not in previousData[key]:
                 previousData[key].append(JobId)
             with open("data/JobIDS.json", "w", encoding="utf--8") as file:
@@ -399,10 +398,11 @@ class Linkedin:
                 prGreen("JobIDS are saved successfully.")
         except Exception as e:
             prRed("Error in saveJobId: " + str(e))
-    
+
     def checkJobId(self, JobId):
         try:
-            previousData = json.loads(open("data/JobIDS.json", encoding="utf-8").read())
+            previousData = json.loads(
+                open("data/JobIDS.json", encoding="utf-8").read())
             for key in previousData:
                 if JobId in previousData[key]:
                     return True

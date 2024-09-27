@@ -93,11 +93,15 @@ def fillTextFields(driver, textFields, errorslist):
     try:
         for i in range(len(textFields)):
             input = driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//input")[i]
-            if input.get_attribute("value") == "":
+            # if input.get_attribute("value") == "":
+            if True:
                 label = driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//label")[i].text
                 answered = utils.getAnsweredQuestion(label)
                 if answered is not False:
+                    input.clear()
                     input.send_keys(answered["answer"]) # type: ignore
+                else:
+                    errorslist.append({"Text Label": label})
     except Exception as e:
         print(e)
         if label is not None:
@@ -118,6 +122,8 @@ def fillSelectFields(driver, selectFields, errorslist):
                 if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
                     select = Select(select)
                     select.select_by_visible_text(answered["answer"]) # type: ignore
+                else:
+                    errorslist.append({"Select Label": label, "Options": options})
     except Exception as e:
         print(e)
         if label is not None:
