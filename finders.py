@@ -135,7 +135,15 @@ def fillSelectFields(driver, selectFields, errorslist):
 def fillRadioFields(driver, radioFields, errorslist):
     try:
         for i in range(1, len(radioFields)+1):
-            label = driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[{i}][not(contains(@id, 'error'))]/legend/span[contains(@class, 'label')]/span[1]").text
+            try:
+                labels = [driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[{i}][not(contains(@id, 'error'))]/legend/span[contains(@class, 'label')]/span[1]").text]
+            except:
+                labelElement = driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[1][not(contains(@id, 'error'))]/parent::*[1]/parent::*[1]/preceding-sibling::*[1]")
+                if "subtitle" in labelElement.get_attribute("class"):
+                    upperLabelElement = labelElement.find_element(By.XPATH, "preceding-sibling::*[1]")
+                    labels = [upperLabelElement.text, labelElement.text]
+                else :
+                    labels = [labelElement.text]
             options = []
             dobreak = False
             optionElements = driver.find_elements(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div")
@@ -145,16 +153,17 @@ def fillRadioFields(driver, radioFields, errorslist):
                     dobreak = True
 
             if not dobreak:
-                answered = utils.getAnsweredQuestion(label)
-                if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
-                    driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
-                else:
-                    errorslist.append({"Radio Label": label, "Options": options})
+                for label in labels:
+                    answered = utils.getAnsweredQuestion(label)
+                    if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                        driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
+                    else:
+                        errorslist.append({"Radio Label": label, "Options": options})
 
     except Exception as e:
         print(e)
-        if label is not None:
-            errorslist.append({"Radio Label": label})
+        if labels is not None:
+            errorslist.append({"Radio Label": labels})
         else:
             errorslist.append("Radio Field")
 
