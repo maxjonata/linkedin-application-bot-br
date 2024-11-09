@@ -477,15 +477,13 @@ def getAnsweredQuestion(label: str) -> Union[QuestionAnswer, bool] :
     try:
         with open('data/answeredQuestions.jsonl', 'r', encoding="utf-8") as json_file:
             counter = 0
-            answerList = []
-            for file in json_file:
+            for line in json_file:
                 counter += 1
-                answerList.append(json.loads(file))
-            for line in answerList:
-                if line["question"] == label:
-                    line["question"] = PadronizeSpaces(line["question"])
-                    line["answer"] = PadronizeSpaces(line["answer"])
-                    return line
+                linejson = json.loads(line)
+                if linejson["question"].upper() == label.upper():
+                    linejson["question"] = PadronizeSpaces(linejson["question"])
+                    linejson["answer"] = PadronizeSpaces(linejson["answer"])
+                    return linejson
     except Exception as e:
         prYellow(f"Excetion in Line: {counter} from file: answeredQuestions.jsonl")
         raise e
@@ -495,7 +493,8 @@ def getAnsweredQuestion(label: str) -> Union[QuestionAnswer, bool] :
 def getAnsweredQuestions() -> list[QuestionAnswer]: #TODO: Fix the functions that use this function to use the new format
     answerList = []
     with open('data/answeredQuestions.jsonl', 'r', encoding="utf-8") as json_file:
-        answerList = json.load(json_file)
+        for line in json_file:
+            answerList.append(json.loads(line))
     return answerList
 
 def PadronizeSpaces(texto):
