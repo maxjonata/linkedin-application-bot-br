@@ -1,8 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 import utils
-import config_local
-import json
 
 class AnswerUnansweredQuestions(tk.Tk):
     def __init__(self):
@@ -85,8 +83,8 @@ class AnswerUnansweredQuestions(tk.Tk):
         self.buttons[self.current_button].invoke()
 
     def answer(self, answer):
-        # save the answer in self.answeredQuestion as {Label: Answer}
-        utils.saveAnsweredQuestion({self.errorsList[self.currentQuestionIndex]["Label"]: answer})
+        # save the answer in self.answeredQuestion as {question: Label, answer: Answer}
+        utils.saveAnsweredQuestion({"question":self.errorsList[self.currentQuestionIndex]["Label"], "answer": answer})
         self.currentQuestionIndex += 1
         # Destroy the old frame and create a new one
         self.buttons = []
