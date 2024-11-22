@@ -90,3 +90,5 @@ ConsiderMeForFutureOffers = True #true = yes, false = no
 Salary = "" #OPTIONAL
 specificCitySelectOption = "" #OPTIONAL
 aptidoes = "" #NEEDED IF USING createAnswers.py
+openai_APIKEY = "" #Needed if using openAIAnswers.py
+openai_JobExperienceDescription = "" #Needed if using openAIAnswers.py
