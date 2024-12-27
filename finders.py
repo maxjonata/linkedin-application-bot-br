@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 import config_local
+import openAIAnswers
 import utils
 
 
@@ -99,10 +100,16 @@ def fillMultiLineTextFields(driver, multiLineTextFields, errorslist):
             # if input.get_attribute("value") == "":
             if True:
                 label = driver.find_elements(By.XPATH, "//*[@data-test-multiline-text-form-component]//label")[i].text
-                answered = utils.getAnsweredQuestion(label)
-                if answered is not False:
+                # answered = utils.getAnsweredQuestion(label)
+                # if answered is not False:
+                #     input.clear()
+                #     input.send_keys(answered["answer"]) # type: ignore
+                # else:
+                #     errorslist.append({"MultiLine Text Label": label})
+                answer = openAIAnswers.letOpenAIAnswer().askQuestion(label)
+                if "NOT SURE" not in answer:
                     input.clear()
-                    input.send_keys(answered["answer"]) # type: ignore
+                    input.send_keys(answer)
                 else:
                     errorslist.append({"MultiLine Text Label": label})
     except Exception as e:
@@ -119,12 +126,19 @@ def fillTextFields(driver, textFields, errorslist):
             # if input.get_attribute("value") == "":
             if True:
                 label = driver.find_elements(By.XPATH, "//*[@data-test-single-line-text-form-component]//label")[i].text
-                answered = utils.getAnsweredQuestion(label)
-                if answered is not False:
+                # answered = utils.getAnsweredQuestion(label)
+                # if answered is not False:
+                #     input.clear()
+                #     input.send_keys(answered["answer"]) # type: ignore
+                # else:
+                #     errorslist.append({"Text Label": label})
+                answer = openAIAnswers.letOpenAIAnswer().askQuestion(label)
+                if "NOT SURE" not in answer:
                     input.clear()
-                    input.send_keys(answered["answer"]) # type: ignore
+                    input.send_keys(answer)
                 else:
                     errorslist.append({"Text Label": label})
+
     except Exception as e:
         print(e)
         if label is not None:
@@ -141,12 +155,19 @@ def fillSelectFields(driver, selectFields, errorslist):
             if (select.get_attribute("selectedIndex") == "0"):
                 label = driver.find_elements(By.XPATH, "//*[@data-test-text-entity-list-form-component]//label/span[1]")[i].text
                 options = [option.text for option in select.find_elements(By.TAG_NAME, "option")]
-                answered = utils.getAnsweredQuestion(label)
-                if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                # answered = utils.getAnsweredQuestion(label)
+                # if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                #     select = Select(select)
+                #     select.select_by_visible_text(answered["answer"]) # type: ignore
+                # else:
+                #     errorslist.append({"Select Label": label, "Options": options})
+                answer = openAIAnswers.letOpenAIAnswer().askQuestion(label, options)
+                if answer in options:
                     select = Select(select)
-                    select.select_by_visible_text(answered["answer"]) # type: ignore
+                    select.select_by_visible_text(answer)
                 else:
                     errorslist.append({"Select Label": label, "Options": options})
+
     except Exception as e:
         print(e)
         if label is not None:
@@ -177,9 +198,14 @@ def fillRadioFields(driver, radioFields, errorslist):
 
             if not dobreak:
                 for label in labels:
-                    answered = utils.getAnsweredQuestion(label)
-                    if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
-                        driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
+                    # answered = utils.getAnsweredQuestion(label)
+                    # if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                    #     driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
+                    # else:
+                    #     errorslist.append({"Radio Label": label, "Options": options})
+                    answer = openAIAnswers.letOpenAIAnswer().askQuestion(label, options)
+                    if answer in options:
+                        driver.find_element(By.XPATH, f"(//*[@data-test-form-builder-radio-button-form-component])[not(contains(@id, 'error'))][{i}]/div[{options.index(answer)+1}]/label").click()
                     else:
                         errorslist.append({"Radio Label": label, "Options": options})
 
@@ -203,11 +229,16 @@ def fillCheckboxFields(driver, checkboxFields, errorslist):
                     dobreak = True
 
             if not dobreak:
-                answered = utils.getAnsweredQuestion(label)
-                if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
-                    driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
+                # answered = utils.getAnsweredQuestion(label)
+                # if isinstance(answered, dict) and answered["question"] == label and answered["answer"] in options:
+                #     driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{options.index(answered["answer"])+1}]/label").click()
+                # else:
+                #     errorslist.append({"Checkbox Label": label, "Options": options})
+                answer = openAIAnswers.letOpenAIAnswer().askQuestion(label, options)
+                if answer in options:
+                    driver.find_element(By.XPATH, f"(//*[contains(@id, 'checkbox-form-component')])[not(contains(@id, 'error'))][{i}]/div[{options.index(answer)+1}]/label").click()
                 else:
-                    errorslist.append({"Checkbox Label": label, "Options": options})
+                    errorslist.append({"Checkbox Label": label, "Options": options })
     except Exception as e:
         print(e)
         if label is not None:
