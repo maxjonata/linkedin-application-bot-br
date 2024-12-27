@@ -9,14 +9,14 @@ class letOpenAIAnswer():
         self.client = OpenAI(
             api_key=config_local.openai_APIKEY
         )
-        self.messages = [{"role": "system", "content": f"You are a concise candidate for a job at a Tech Company and needs to answer everything as true to the job experience description as possible. When user asks 'WDYK?' tell everything on the conversation that you weren't able to answer because weren't on your description scope. All your answers need to follow the exact same text as the answer options or if no option given the answer must be a short sentence in the same language as the question and using just one line, if the question can't be answered with the job experience you have been described just answer 'NOT SURE'. Your job experience is described as following: '{config_local.openai_JobExperienceDescription}'"}]
+        self.messages = [{"role": "system", "content": f"You are a concise candidate for a job at a Tech Company. Answer everything as truthfully as possible based on the provided job experience description. If the description does not explicitly mention something. Use a respectful tone suitable for a professional interview. If asked for a salary, respond with just a number unless the question specifies a time period. If the user asks specifically 'WDYK?', summarize all relevant information you could not address during the conversation due to gaps in the provided experience the most concize as possible not following other directives on how to talk. Format all answers to match the style and language of the question, keeping them concise and direct. Use only one line if possible. If a question cannot reasonably be answered even with inference, respond with 'NOT SURE'. Your job experience is described as following: '{config_local.openai_JobExperienceDescription}'"}]
         self.unanswered_questions = []
         self.answered_questions = []
 
     def getChatAnswer(self, user_message):
         self.messages.append({"role": "user", "content": user_message})
         chat = self.client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=self.messages
         )
         answer = chat.choices[0].message.content
@@ -43,7 +43,7 @@ class letOpenAIAnswer():
         return self.unanswered_questions
     
     def getAnsweredQuestions(self):
-        return self.unanswered_questions
+        return self.answered_questions
 
 if __name__ == "__main__":
     ai = letOpenAIAnswer()
