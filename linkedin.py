@@ -75,7 +75,7 @@ class Linkedin:
             utils.wait_until_visible_and_find(
                 driver, "xpath",
                 '//*[@id="organic-div"]/form/div[3]/button').click()
-        except:
+        except e:
             prRed(e)
 
     def generateUrls(self):
@@ -109,7 +109,7 @@ class Linkedin:
                         self.driver, By.XPATH,
                         "//*[contains(@class,'jobs-post-job')]") is not False:
                     break
-            except:
+            except e:
                 prRed("Error in going through offers: " + str(e))
 
         countJobs += 1
@@ -342,6 +342,9 @@ class Linkedin:
                                                     errorslist)
             except Exception as e:
                 prRed(f"Error applying page in percentage: {progress}")
+                if len(errorslist) == 0:
+                    errorslist.append({"Progress Error": str(e)})
+                    errorslist.append({"Link": str(offerPage)})
 
             if len(errorslist) > 0:
                 raise Exception(errorslist)
