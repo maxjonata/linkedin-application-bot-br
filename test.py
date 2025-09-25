@@ -4,6 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 
 from utils import prGreen,prRed,prYellow
+import config_local as config
 
 
 prYellow("ℹ️  This script will check if the bot can automatically log in Linkedin for you.")
@@ -34,11 +35,16 @@ def checkSelenium():
 def checkFirefox():
     try:
         import subprocess
-        output = subprocess.check_output(['firefox', '--version'])
+        output = False
+        try:
+            output = subprocess.check_output(['firefox', '--version'])
+            output = True
+        except:
+            pass
         if(output):
             prGreen("✅ Firefox is succesfully installed!")
         else:
-            prRed("❌ Firefox not present. Install firefox: https://www.mozilla.org/en-US/firefox/")
+            prRed("❌ Firefox not present, or if running through venv wont be able to check outsider apps. Install firefox: https://www.mozilla.org/en-US/firefox/")
 
     except ImportError as e:
         prRed(e)
@@ -46,7 +52,7 @@ def checkFirefox():
 def checkSeleniumLinkedin():
 
     options = Options()
-    #firefoxProfileRootDir = os.getenv('firefoxProfileRootDir')
+    firefoxProfileRootDir = config.firefoxProfileRootDir
 
     options.add_argument("--start-maximized")
     options.add_argument("--ignore-certificate-errors")
@@ -54,8 +60,8 @@ def checkSeleniumLinkedin():
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-blink-features")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    #options.add_argument("-profile")
-    #options.add_argument(firefoxProfileRootDir)
+    options.add_argument("-profile")
+    options.add_argument(firefoxProfileRootDir)
     #options.headless = True
 
     browser = webdriver.Firefox(options=options)

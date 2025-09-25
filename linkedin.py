@@ -17,8 +17,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.firefox import GeckoDriverManager
 
 import config_local
 import constants
@@ -57,8 +55,8 @@ class Linkedin:
             else:
                 driver = webdriver.Firefox(options=utils.browserOptions())
         elif browser == "chrome":
-            driver = webdriver.Chrome(ChromeDriverManager().install())
-            self.login(driver)
+            prRed('No Can do')
+            raise
 
         return driver
 
